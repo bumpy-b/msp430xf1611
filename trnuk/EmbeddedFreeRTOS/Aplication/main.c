@@ -128,6 +128,7 @@ static void vTaskLED1( void *pvParameters )
   while (1)
   {
     /* Toggle green LED and wait 1000 ticks */
+	printf("hello\n");
     LED_OUT ^= BIT_GREEN;
     vTaskDelay(1000);
   }
