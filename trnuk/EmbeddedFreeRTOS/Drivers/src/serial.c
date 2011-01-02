@@ -225,8 +225,6 @@ interrupt (UART1RX_VECTOR) wakeup vRxISR( void )
 {
 signed char cChar;
 portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
-// toggle the blue led on ISR
-P5OUT ^= (1 << 6);
 
 	/* Get the character from the UART and post it on the queue of Rxed 
 	characters. */
@@ -253,7 +251,7 @@ signed char cChar;
 portBASE_TYPE xTaskWoken = pdFALSE;
 
 // toggle the blue led on ISR
-P5OUT ^= (1 << 6);
+//P5OUT ^= (1 << 6);
 
 	/* The previous character has been transmitted.  See if there are any
 	further characters waiting transmission. */

@@ -8,13 +8,13 @@
 /* Scheduler includes. */
 #include "FreeRTOS.h"
 #include "task.h"
+#include "semphr.h"
+
+/* debugging */
+#include "debugFunction.h"
 
 /* LEDs config */
 #define mainLED_TASK_PRIORITY (tskIDLE_PRIORITY + 1)
-#define LED_OUT P5OUT
-#define BIT_BLUE (1 << 6)
-#define BIT_GREEN (1 << 5)
-#define BIT_RED (1 << 4)
 
 /*
 * The LEDs flashing tasks
@@ -32,7 +32,7 @@ static void prvSetupHardware( void );
 static uint16_t uxBufferLength = 255;
 static eBaud eBaudRate = ser2400;
 static xComPortHandle xPort;
-
+static xSemaphoreHandle xSemaphore;
 /*---------------------------------------------------*/
 int putchar(int c)
 {
@@ -41,18 +41,19 @@ int putchar(int c)
 }
 
 /*
-static char strOut[126];
-int myPrintf(const char *format, ...)
+int myPrintf(const char *format)//, ...)
 {
-	va_list args;
-	int rc;// = printf(format,args);
-	rc = sprintf(strOut,format,args);
-	vSerialPutString(xPort, strOut, rc);
-  	putchar('\r');
-  	return rc;
+	xSemaphoreTake( xSemaphore, 100 );
+	printf(format);
+  putchar('\r');
+  xSemaphoreGive( xSemaphore );
+
+  return 0;
 }
+
+#define printf myPrintf
+
 */
-//#define printf myPrintf
 /*---------------------------------------------------*/
 
 
@@ -60,6 +61,12 @@ int main( void )
 {
   /* Setup the hardware ready for the demo. */
   prvSetupHardware();
+  vSemaphoreCreateBinary( xSemaphore );
+  xSemaphoreGive( xSemaphore );
+
+  ledOff(GREEN);
+  ledOff(BLUE);
+  ledOff(RED);
 
   /* Start the LEDs tasks */
   xTaskCreate( vTaskLED0, "LED0", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
@@ -81,11 +88,11 @@ static void vTaskPrint( void *pvParameters )
 {
   while (1)
   {
-    /* Toggle green LED and wait 1000 ticks */
-//printf("hello msp430x1611\n");
-//	  	putchar('\n');
-//	  	putchar('\r');
-    vTaskDelay(1000);
+  	xSemaphoreTake( xSemaphore, 100 );
+	  printf("hello\n");
+	  putchar('\r');
+	  xSemaphoreGive( xSemaphore );
+	  vTaskDelay(1000);
   }
 }
 
@@ -95,29 +102,7 @@ static void vTaskLED0( void *pvParameters )
   while (1)
   {
     /* Toggle blue LED and wait 500 ticks */
-//    LED_OUT ^= BIT_BLUE;
-// generate rx interrupt:
-	  //IFG2 |= URXIFG1;
-	 /* putchar('h');
-	  putchar('e');
-	  putchar('l');
-	  putchar('l');
-	  putchar('o');
-	  putchar(' ');
-	  putchar('m');
-	  putchar('s');
-	  putchar('p');
-	  putchar('4');
-	  putchar('3');
-	  putchar('0');
-	  putchar('x');
-	  putchar('1');
-	  putchar('6');
-	  putchar('1');
-	  putchar('1');
-	 putchar('\n');
-	 putchar('\r');
-*/
+  	ledFlip(BIT_BLUE);
     vTaskDelay(5000);
   }
 }
@@ -128,8 +113,7 @@ static void vTaskLED1( void *pvParameters )
   while (1)
   {
     /* Toggle green LED and wait 1000 ticks */
-	printf("hello\n");
-    LED_OUT ^= BIT_GREEN;
+  	ledFlip(GREEN);
     vTaskDelay(1000);
   }
 }
@@ -140,8 +124,8 @@ static void vTaskLED2( void *pvParameters )
   while (1)
   {
     /* Toggle red LED and wait 2000 ticks */
-    LED_OUT ^= BIT_RED;
-    vTaskDelay(2000);
+		ledFlip(RED);
+		vTaskDelay(2000);
   }
 }
 
