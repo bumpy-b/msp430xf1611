@@ -4,7 +4,7 @@
 #include <signal.h>
 
 #include "serial.h"
-
+#include "io.h"
 /* Scheduler includes. */
 #include "FreeRTOS.h"
 #include "task.h"
@@ -82,7 +82,7 @@ static void vTaskPrint( void *pvParameters )
   while (1)
   {
     /* Toggle green LED and wait 1000 ticks */
-printf("hello msp430x1611\n");
+//printf("hello msp430x1611\n");
 //	  	putchar('\n');
 //	  	putchar('\r');
     vTaskDelay(1000);
