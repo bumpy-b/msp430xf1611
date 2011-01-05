@@ -12,6 +12,7 @@
 
 /* debugging */
 #include "debugFunction.h"
+#include "mystdio.h"
 
 /* LEDs config */
 #define mainLED_TASK_PRIORITY (tskIDLE_PRIORITY + 1)
@@ -31,29 +32,8 @@ static void prvSetupHardware( void );
 /* serial uart device */
 static uint16_t uxBufferLength = 255;
 static eBaud eBaudRate = ser2400;
-static xComPortHandle xPort;
-static xSemaphoreHandle xSemaphore;
-/*---------------------------------------------------*/
-int putchar(int c)
-{
-	xSerialPutChar( xPort, (uint8_t)c, 100 );
-	return 0;
-}
+xComPortHandle xPort;
 
-/*
-int myPrintf(const char *format)//, ...)
-{
-	xSemaphoreTake( xSemaphore, 100 );
-	printf(format);
-  putchar('\r');
-  xSemaphoreGive( xSemaphore );
-
-  return 0;
-}
-
-#define printf myPrintf
-
-*/
 /*---------------------------------------------------*/
 
 
@@ -61,13 +41,16 @@ int main( void )
 {
   /* Setup the hardware ready for the demo. */
   prvSetupHardware();
-  vSemaphoreCreateBinary( xSemaphore );
-  xSemaphoreGive( xSemaphore );
-
   ledOff(GREEN);
   ledOff(BLUE);
   ledOff(RED);
 
+  printf("%d\n",-65535);
+  printf("%d\n",-32769);
+  printf("%d\n",-32768);
+  printf("%d\n",-32767);
+  printf("%d\n",32768);
+  printf("%d\n",32769);
   /* Start the LEDs tasks */
   xTaskCreate( vTaskLED0, "LED0", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
   xTaskCreate( vTaskLED1, "LED1", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
@@ -86,12 +69,11 @@ int main( void )
 /* Second LED flash task */
 static void vTaskPrint( void *pvParameters )
 {
+	int helloCounter = 0;
   while (1)
   {
-  	xSemaphoreTake( xSemaphore, 100 );
-	  printf("hello\n");
-	  putchar('\r');
-	  xSemaphoreGive( xSemaphore );
+  	printf("%s number %d with hex number %x\n","hello",helloCounter,helloCounter);
+  	helloCounter++;
 	  vTaskDelay(1000);
   }
 }
