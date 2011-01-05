@@ -1,6 +1,7 @@
 #include "FreeRTOS.h"
 #include "debugFunction.h"
 
+
 void ledOn(uint8_t colore){
 	LED_OUT &= ~colore;
 }
