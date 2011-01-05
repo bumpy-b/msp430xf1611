@@ -45,12 +45,6 @@ int main( void )
   ledOff(BLUE);
   ledOff(RED);
 
-  printf("%d\n",-65535);
-  printf("%d\n",-32769);
-  printf("%d\n",-32768);
-  printf("%d\n",-32767);
-  printf("%d\n",32768);
-  printf("%d\n",32769);
   /* Start the LEDs tasks */
   xTaskCreate( vTaskLED0, "LED0", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
   xTaskCreate( vTaskLED1, "LED1", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
