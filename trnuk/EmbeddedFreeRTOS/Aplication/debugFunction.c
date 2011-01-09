@@ -2,14 +2,18 @@
 #include "debugFunction.h"
 
 
-void ledOn(uint8_t colore){
+void ledOn(eColor_t colore){
 	LED_OUT &= ~colore;
 }
 
-void ledOff(uint8_t colore){
+void ledOff(eColor_t colore){
 	LED_OUT |= colore;
 }
 
-void ledFlip(uint8_t colore){
+void ledFlip(eColor_t colore){
 	LED_OUT ^= colore;
+}
+
+void debugState(eDebugState state) {
+	LED_OUT &= ~STATE7 | state;
 }
