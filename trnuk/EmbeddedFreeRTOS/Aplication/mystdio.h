@@ -15,6 +15,7 @@
  *	%s - null terminated string
  * critical assumption:
  * 	number of formats == number of arguments(not include the format itself)
+ *  this function cannot be called in an isr!!!
  */
 void myPrintf(char* format,...);
 #define printf myPrintf
