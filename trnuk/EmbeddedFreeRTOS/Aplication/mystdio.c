@@ -36,7 +36,8 @@ void myPrintf(char* format,...){
 		initialized = 1;
 	}
 
-	xSemaphoreTake( xSemaphore, 100 );
+	if (pdTRUE != xSemaphoreTake( xSemaphore, 1000 ))
+		return;
 	va_list ap;
 	char* arg;
 

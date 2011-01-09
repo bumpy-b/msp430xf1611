@@ -68,7 +68,7 @@ static void vTaskPrint( void *pvParameters )
   {
   	printf("%s number %d with hex number %x\n","hello",helloCounter,helloCounter);
   	helloCounter++;
-	  vTaskDelay(1000);
+	  //vTaskDelay(1000);
   }
 }
 
@@ -78,6 +78,8 @@ static void vTaskLED0( void *pvParameters )
   while (1)
   {
     /* Toggle blue LED and wait 500 ticks */
+	  printf("BIT BLUE %s number with hex number \n","hello");
+
   	ledFlip(BIT_BLUE);
     vTaskDelay(5000);
   }
