@@ -166,6 +166,15 @@ xComPortHandle xSerialPortInitMinimal( eBaud ulWantedBaud, unsigned portBASE_TYP
 	instead just return NULL. */
 	return NULL;
 }
+/* this function peeks the rx buffer and return the data */
+signed portBASE_TYPE xSerialPeek
+	( xComPortHandle pxPort,
+	  signed char *pcRxedChar,
+	  portTickType xBlockTime)
+{
+	return
+			xQueueGenericReceive( xRxedChars, pcRxedChar, xBlockTime, pdTRUE);
+}
 /*-----------------------------------------------------------*/
 
 signed portBASE_TYPE xSerialGetChar( xComPortHandle pxPort, signed char *pcRxedChar, portTickType xBlockTime )
