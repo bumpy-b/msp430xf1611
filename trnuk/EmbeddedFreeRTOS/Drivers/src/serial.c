@@ -60,7 +60,7 @@
 /* Standard includes. */
 #include <stdlib.h>
 #include <signal.h>
-
+#include "debugFunction.h"
 /* Scheduler includes. */
 #include "FreeRTOS.h"
 #include "queue.h"
@@ -103,14 +103,17 @@ xComPortHandle xSerialPortInitMinimal( eBaud ulWantedBaud, unsigned portBASE_TYP
 		xCharsForTx = xQueueCreate( uxQueueLength, ( unsigned portBASE_TYPE ) sizeof( signed char ) );
 
 		/* Reset UART. */
-		UCTL1 |= SWRST;
+		 P3DIR &= ~0x80;			/* Select P37 for input (UART1RX) */
+		  P3DIR |= 0x40;			/* Select P36 for output (UART1TX) */
+		  P3SEL |= 0xC0;			/* Select P36,P37 for UART1{TX,RX} */
 
 		/* Set pin function. */
-		P3SEL |= serTX_AND_RX;
+	//	P3SEL |= serTX_AND_RX;
 
 		/* All other bits remain at zero for n, 8, 1 interrupt driven operation. 
 		LOOPBACK MODE!*/
-		U1CTL |= CHAR | LISTEN;
+		U1CTL |= CHAR;
+
 		U1TCTL |= SSEL0; /* use ACLK (32 kHz on TelosB)           */
 		U1BR1   = 0x00;  /* Setup baud rate high byte. */
 
@@ -133,11 +136,21 @@ xComPortHandle xSerialPortInitMinimal( eBaud ulWantedBaud, unsigned portBASE_TYP
 
 		}
 
+		ME2 &= ~USPIE1;			/* USART1 SPI module disable */
+	    ME2 |= (UTXE1 | URXE1);               /* Enable USART1 TXD/RXD */
+
+
+
 		/* Enable ports. */
-		ME2 |= UTXE1 | URXE1;
+//		ME2 |= UTXE1 | URXE1;
 
 		/* Set. */
 		UCTL1 &= ~SWRST;
+
+		/* XXX Clear pending interrupts before enable!!! */
+		IFG2 &= ~URXIFG1;
+		U1TCTL |= URXSE;
+		//IE2 |= URXIE1;
 
 		/* Nothing in the buffer yet. */
 		sTHREEmpty = pdTRUE;
@@ -226,19 +239,35 @@ interrupt (UART1RX_VECTOR) wakeup vRxISR( void )
 signed char cChar;
 portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
 
-	/* Get the character from the UART and post it on the queue of Rxed 
-	characters. */
-	cChar = U1RXBUF;
+	ledFlip(BLUE);
 
-	xQueueSendFromISR( xRxedChars, &cChar, &xHigherPriorityTaskWoken );
+	 if(!(URXIFG1 & IFG2)) {
+	    /* Edge detect if IFG not set? */
+	    U1TCTL &= ~URXSE; /* Clear the URXS signal */
+	    U1TCTL |= URXSE;  /* Re-enable URXS - needed here?*/
 
-	if( xHigherPriorityTaskWoken )
-	{
-		/*If the post causes a task to wake force a context switch 
-		as the woken task may have a higher priority than the task we have 
-		interrupted. */
-		taskYIELD();
-	}
+	  } else {
+	    /* Check status register for receive errors. */
+	    if(URCTL1 & RXERR) {
+	      volatile unsigned dummy;
+	      dummy = RXBUF1;   /* Clear error flags by forcing a dummy read. */
+	    } else {
+
+	    	xQueueSendFromISR( xRxedChars, &cChar, &xHigherPriorityTaskWoken );
+
+	    	if( xHigherPriorityTaskWoken )
+	    	{
+	    		/*If the post causes a task to wake force a context switch
+	    		as the woken task may have a higher priority than the task we have
+	    		interrupted. */
+	    		taskYIELD();
+	    	}
+
+	    }
+	   }
+	 return;
+
+
 }
 /*-----------------------------------------------------------*/
 

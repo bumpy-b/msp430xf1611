@@ -17,6 +17,8 @@ COMMON_PATH = ../Common/Full
 #
 SRC = \
 main.c \
+debugFunction.c \
+mystdio.c \
 ../Drivers/src/serial.c \
 ../FreeRTOS/src/tasks.c \
 ../FreeRTOS/src/list.c \
