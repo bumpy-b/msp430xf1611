@@ -4,13 +4,22 @@
 
 //include for function with unknown number of arguments
 #include <stdarg.h>
-
+#include "mystdio.h"
 /* serial port */
 extern xComPortHandle xPort;
 
-#define putchar(c) xSerialPutChar( xPort, (uint8_t)c, 100 )
 static char DigitToChar[] = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
 
+int putchar(int c)
+{
+	return xSerialPutChar( xPort, (uint8_t)c, 100 );
+}
+char getchar(void)
+{
+	char ch;
+	xSerialGetChar( xPort, &ch, 100);
+	return ch;
+}
 void printUInt(uint16_t n){
 	if (n){
 		printUInt(n/10);

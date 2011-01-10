@@ -20,5 +20,7 @@
 void myPrintf(char* format,...);
 #define printf myPrintf
 
-
+//#define putchar(c) xSerialPutChar( xPort, (uint8_t)c, 100 )
+int putchar(int c);
+char getchar(void);
 #endif /* MYSTIO_H_ */
