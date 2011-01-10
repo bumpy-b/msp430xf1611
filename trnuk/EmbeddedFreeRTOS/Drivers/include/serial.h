@@ -124,6 +124,11 @@ void vSerialPutString( xComPortHandle pxPort, const char * const pcString, unsig
 int16_t xSerialGetChar( xComPortHandle pxPort, int8_t *pcRxedChar, uint16_t xBlockTime );
 int16_t xSerialPutChar( xComPortHandle pxPort, int8_t cOutChar, uint32_t xBlockTime );
 int16_t xSerialWaitForSemaphore( xComPortHandle xPort );
+
+/* peek the buffer for rx */
+int16_t xSerialPeek( xComPortHandle pxPort,
+		int8_t *pcRxedChar,
+		uint16_t xBlockTime);
 void vSerialClose( xComPortHandle xPort );
 
 #endif

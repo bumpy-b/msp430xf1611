@@ -20,6 +20,11 @@ char getchar(void)
 	xSerialGetChar( xPort, &ch, 100);
 	return ch;
 }
+int hasRxData(void)
+{
+	char ch;
+	return xSerialPeek ( xPort,&ch, 0);
+}
 void printUInt(uint16_t n){
 	if (n){
 		printUInt(n/10);
