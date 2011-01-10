@@ -78,7 +78,7 @@ static void vTaskLED0( void *pvParameters )
 
   while (1)
   {
-	  putchar('a');
+	  putchar(getchar());
     /* Toggle blue LED and wait 500 ticks */
 	//  printf("BIT BLUE %s number with hex number \n","hello");
 

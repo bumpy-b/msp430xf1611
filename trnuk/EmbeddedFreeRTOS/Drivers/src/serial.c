@@ -249,10 +249,10 @@ portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
 	  } else {
 	    /* Check status register for receive errors. */
 	    if(URCTL1 & RXERR) {
-	      volatile unsigned dummy;
-	      dummy = RXBUF1;   /* Clear error flags by forcing a dummy read. */
+	      cChar = RXBUF1;   /* Clear error flags by forcing a dummy read. */
 	    } else {
 
+	    	cChar = RXBUF1;
 	    	xQueueSendFromISR( xRxedChars, &cChar, &xHigherPriorityTaskWoken );
 
 	    	if( xHigherPriorityTaskWoken )
