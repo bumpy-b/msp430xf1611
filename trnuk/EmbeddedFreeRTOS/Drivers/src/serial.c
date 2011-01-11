@@ -103,16 +103,18 @@ xComPortHandle xSerialPortInitMinimal( eBaud ulWantedBaud, unsigned portBASE_TYP
 		xCharsForTx = xQueueCreate( uxQueueLength, ( unsigned portBASE_TYPE ) sizeof( signed char ) );
 
 		/* Reset UART. */
-		 P3DIR &= ~0x80;			/* Select P37 for input (UART1RX) */
-		  P3DIR |= 0x40;			/* Select P36 for output (UART1TX) */
-		  P3SEL |= 0xC0;			/* Select P36,P37 for UART1{TX,RX} */
+		P3DIR &= ~BIT7;			/* Select P3.7 for input (UART1RX) */
+		P3DIR |= BIT6;			/* Select P3.6 for output (UART1TX) */
+		P3SEL |= serTX_AND_RX;  /* Select P3.6,P3.7 for UART1{TX,RX} */
 
 		/* Set pin function. */
-	//	P3SEL |= serTX_AND_RX;
+
 
 		/* All other bits remain at zero for n, 8, 1 interrupt driven operation. 
 		LOOPBACK MODE!*/
 		U1CTL |= CHAR;
+
+		/* baud rate calculations */
 
 		U1TCTL |= SSEL0; /* use ACLK (32 kHz on TelosB)           */
 		U1BR1   = 0x00;  /* Setup baud rate high byte. */
@@ -136,13 +138,9 @@ xComPortHandle xSerialPortInitMinimal( eBaud ulWantedBaud, unsigned portBASE_TYP
 
 		}
 
-		ME2 &= ~USPIE1;			/* USART1 SPI module disable */
-	    ME2 |= (UTXE1 | URXE1);               /* Enable USART1 TXD/RXD */
+		ME2 &= ~USPIE1;		   	 /* USART1 SPI module disable */
+	    ME2 |= (UTXE1 | URXE1);  /* Enable USART1 TXD/RXD */
 
-
-
-		/* Enable ports. */
-//		ME2 |= UTXE1 | URXE1;
 
 		/* Set. */
 		UCTL1 &= ~SWRST;
