@@ -64,12 +64,12 @@ int main( void )
 static void vTaskPrint( void *pvParameters )
 {
 	int helloCounter = 0;
-  while (1)
-  {
- // 	printf("%s number %d with hex number %x\n","hello",helloCounter,helloCounter);
-  //	helloCounter++;
-	  //vTaskDelay(1000);
-  }
+	while (1)
+	{
+		printf("%s number %d with hex number %x\n","hello",helloCounter,helloCounter);
+		helloCounter++;
+		vTaskDelay(1000);
+	}
 }
 
 /* First LED flash task */
