@@ -4,6 +4,57 @@
 #ifndef SPI_H
 #define SPI_H
 
+
+/**************************<<< FROM CONTIKI: contiki-conf.h >>>******************************/
+
+/*
+ * SPI bus - CC2420 pin configuration.
+ */
+
+#define FIFO_P         0  /* P1.0 - Input: FIFOP from CC2420 */
+#define FIFO           3  /* P1.3 - Input: FIFO from CC2420 */
+#define CCA            4  /* P1.4 - Input: CCA from CC2420 */
+
+#define SFD            1  /* P4.1 - Input:  SFD from CC2420 */
+#define CSN            2  /* P4.2 - Output: SPI Chip Select (CS_N) */
+#define VREG_EN        5  /* P4.5 - Output: VREG_EN to CC2420 */
+#define RESET_N        6  /* P4.6 - Output: RESET_N to CC2420 */
+
+/* Pin status. */
+
+#define FIFO_IS_1       (!!(P1IN & BV(FIFO)))
+#define CCA_IS_1        (!!(P1IN & BV(CCA) ))
+#define RESET_IS_1      (!!(P4IN & BV(RESET_N)))
+#define VREG_IS_1       (!!(P4IN & BV(VREG_EN)))
+#define FIFOP_IS_1      (!!(P1IN & BV(FIFO_P)))
+#define SFD_IS_1        (!!(P4IN & BV(SFD)))
+
+
+/* SPI input/output registers. */
+#define SPI_TXBUF U0TXBUF
+#define SPI_RXBUF U0RXBUF
+
+				/* USART0 Tx buffer ready? */
+#define	SPI_WAITFOREOTx() while ((U0TCTL & TXEPT) == 0)
+				/* USART0 Rx buffer ready? */
+#define	SPI_WAITFOREORx() while ((IFG1 & URXIFG0) == 0)
+
+#define SCK            1  /* P3.1 - Output: SPI Serial Clock (SCLK) */
+#define MOSI           2  /* P3.2 - Output: SPI Master out - slave in (MOSI) */
+#define MISO           3  /* P3.3 - Input:  SPI Master in - slave out (MISO) */
+
+/*
+ * SPI bus - M25P80 external flash configuration.
+ */
+
+#define FLASH_PWR	3	/* P4.3 Output */
+#define FLASH_CS	4	/* P4.4 Output */
+#define FLASH_HOLD	7	/* P4.7 Output */
+
+#define SPI_ENABLE()    ( P4OUT &= ~BV(CSN) ) /* ENABLE CSn (active low) */
+#define SPI_DISABLE()   ( P4OUT |=  BV(CSN) ) /* DISABLE CSn (active low) */
+/**************************************************************************************/
+
 extern unsigned char spi_busy;
 
 void spi_init(void);
