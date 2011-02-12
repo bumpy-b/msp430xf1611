@@ -1,10 +1,3 @@
-/*
- * packebuf.c
- *
- *  Created on: 11/02/2011
- *      Author: Lior
- */
-
 #ifndef PACKEBUF_H_
 #define PACKEBUF_H_
 
@@ -297,13 +290,12 @@ enum {
 #define PACKETBUF_NUM_ATTRS (PACKETBUF_ATTR_MAX - PACKETBUF_NUM_ADDRS)
 #define PACKETBUF_ADDR_FIRST PACKETBUF_ADDR_SENDER
 
-
-extern struct packetbuf_attr packetbuf_attrs[];
-extern struct packetbuf_addr packetbuf_addrs[];
+static struct packetbuf_attr packetbuf_attrs[PACKETBUF_NUM_ATTRS];
+static struct packetbuf_addr packetbuf_addrs[PACKETBUF_NUM_ATTRS];
 
 static int               packetbuf_set_attr(uint8_t type, const packetbuf_attr_t val);
 static packetbuf_attr_t    packetbuf_attr(uint8_t type);
-static int               packetbuf_set_addr(uint8_t type, const uint8_t *addr);
+// static int               packetbuf_set_addr(uint8_t type, const uint8_t *addr);
 static const uint8_t *packetbuf_addr(uint8_t type);
 
 static inline int
@@ -319,13 +311,15 @@ packetbuf_attr(uint8_t type)
   return packetbuf_attrs[type].val;
 }
 
+/*
 static inline int
 packetbuf_set_addr(uint8_t type, const uint8_t *addr)
 {
-/*   packetbuf_addrs[type - PACKETBUF_ADDR_FIRST].type = type; */
+/ *   packetbuf_addrs[type - PACKETBUF_ADDR_FIRST].type = type; * /
   rimeaddr_copy(&packetbuf_addrs[type - PACKETBUF_ADDR_FIRST].addr, addr);
   return 1;
 }
+*/
 
 static inline const uint8_t *
 packetbuf_addr(uint8_t type)

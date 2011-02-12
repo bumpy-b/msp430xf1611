@@ -1,10 +1,3 @@
-/*
- * radio.h
- *
- *  Created on: 11/02/2011
- *      Author: Lior
- */
-
 #ifndef RADIO_H_
 #define RADIO_H_
 

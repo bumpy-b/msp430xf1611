@@ -4,64 +4,54 @@
 #include "radio.h"
 #include "msp430def.h"
 #include "packebuf.h"
+#include "mystdio.h"
 
+/*---------------------------------------------------------------------------*/
+static void (* receiver_callback)(const struct radio_driver *);
+
+void cc2420_arch_init(void);
+
+int cc2420_on(void);
+int cc2420_off(void);
+
+int cc2420_read(void *buf, unsigned short bufsize);
+
+int cc2420_send(const void *data, unsigned short len);
+
+void cc2420_set_receiver(void (* recv)(const struct radio_driver *d));
+/*---------------------------------------------------------------------------*/
+
+/************************<<< DEFINITION AND TYPES >>>**********************/
+#define AUTOACK (1 << 4)
+#define ADR_DECODE (1 << 11)
+#define RXFIFO_PROTECTION (1 << 9)
+#define CORR_THR(n) (((n) & 0x1f) << 6)
+#define FIFOP_THR(n) ((n) & 0x7f)
+#define RXBPF_LOCUR (1 << 13);
 
 #define WITH_SEND_CCA 0
 #define TIMESTAMP_LEN 3
 #define FOOTER_LEN 2
 #define CHECKSUM_LEN 0
 
-#define AUX_LEN (CHECKSUM_LEN + TIMESTAMP_LEN + FOOTER_LEN)
+#define FOOTER1_CRC_OK      0x80
+#define FOOTER1_CORRELATION 0x7f
+
+#define LOOP_20_SYMBOLS 400	/* 326us (msp430 @ 2.4576MHz) */
 
 struct timestamp {
   uint16_t time;
   uint8_t authority_level;
 };
 
-
-#define FOOTER1_CRC_OK      0x80
-#define FOOTER1_CORRELATION 0x7f
-
-#define DEBUG 0
-#define PRINTF(...) do {} while (0)
-
-void cc2420_arch_init(void);
-
-/* XXX hack: these will be made as Chameleon packet attributes */
-uint8_t cc2420_time_of_arrival, cc2420_time_of_departure;
-
-int cc2420_authority_level_of_sender;
-
-
-static uint8_t setup_time_for_transmission;
-static unsigned long total_time_for_transmission, total_transmission_len;
-static int num_transmissions;
-
-/*---------------------------------------------------------------------------*/
-//TODO// PROCESS(cc2420_process, "CC2420 driver");
-
-//TODO - added for compilation://
 struct rimestats {
   unsigned long tx, rx;
-
-  unsigned long reliabletx, reliablerx,
-    rexmit, acktx, noacktx, ackrx, timedout, badackrx;
-
-  /* Reasons for dropping incoming packets: */
-  unsigned long toolong, tooshort, badsynch, badcrc;
-
-  unsigned long contentiondrop, /* Packet dropped due to contention */
-    sendingdrop; /* Packet dropped when we were sending a packet */
-
+  unsigned long reliabletx, reliablerx, rexmit, acktx, noacktx, ackrx, timedout, badackrx;
+  unsigned long toolong, tooshort, badsynch, badcrc; /* Reasons for dropping incoming packets: */
+  unsigned long contentiondrop; /* Packet dropped due to contention */
+  unsigned long sendingdrop; /* Packet dropped when we were sending a packet */
   unsigned long lltx, llrx;
 };
-
-struct rimestats rimestats;
-
-#define RIMESTATS_ADD(x) rimestats.x++
-#define rtimer_arch_now() (TAR)
-#define RTIMER_NOW() rtimer_arch_now()
-void clock_delay(unsigned int i){}
 
 enum energest_type {
   //ENERGEST_TYPE_CPU,
@@ -83,14 +73,17 @@ enum energest_type {
   ENERGEST_TYPE_MAX
 };
 
-int energest_total_count;
 typedef struct {
   //unsigned long cumulative[2];
   unsigned long current;
 } energest_t;
-energest_t energest_total_time[ENERGEST_TYPE_MAX];
-uint8_t energest_current_time[ENERGEST_TYPE_MAX];
-uint8_t energest_current_mode[ENERGEST_TYPE_MAX];
+/**************************************************************************/
+
+/***************************<<< MACROS DEFINITION >>>**********************/
+#define AUX_LEN (CHECKSUM_LEN + TIMESTAMP_LEN + FOOTER_LEN)
+#define RIMESTATS_ADD(x) rimestats.x++
+#define rtimer_arch_now() (TAR)
+#define RTIMER_NOW() rtimer_arch_now()
 
 #define ENERGEST_ON(type)  do { \
                            /*++energest_total_count;*/ \
@@ -103,19 +96,25 @@ uint8_t energest_current_mode[ENERGEST_TYPE_MAX];
                            energest_current_time[type]); \
 			   energest_current_mode[type] = 0; \
                            } while(0)
-/*---------------------------------------------------------------------------*/
+/**************************************************************************/
 
-static void (* receiver_callback)(const struct radio_driver *);
+/*********************<<< MODULE INTERNAL VARIABELS >>>********************/
+/* XXX hack: these will be made as Chameleon packet attributes */
+uint8_t cc2420_time_of_arrival, cc2420_time_of_departure;
 
-int cc2420_on(void);
-int cc2420_off(void);
+static uint8_t setup_time_for_transmission;
+static unsigned long total_time_for_transmission, total_transmission_len;
+static int num_transmissions;
 
-int cc2420_read(void *buf, unsigned short bufsize);
+struct rimestats rimestats;
 
-int cc2420_send(const void *data, unsigned short len);
+int cc2420_authority_level_of_sender;
 
-void cc2420_set_receiver(void (* recv)(const struct radio_driver *d));
+int energest_total_count;
 
+energest_t energest_total_time[ENERGEST_TYPE_MAX];
+uint8_t energest_current_time[ENERGEST_TYPE_MAX];
+uint8_t energest_current_mode[ENERGEST_TYPE_MAX];
 
 signed char cc2420_last_rssi;
 uint8_t cc2420_last_correlation;
@@ -130,28 +129,66 @@ const struct radio_driver cc2420_driver =
   };
 
 static uint8_t receive_on;
+
 /* Radio stuff in network byte order. */
 static uint16_t pan_id;
 
 static int channel;
 
-/*---------------------------------------------------------------------------*/
 static uint8_t rxptr; /* Pointer to the next byte in the rxfifo. */
 
-static void
-getrxdata(void *buf, int len)
+static uint8_t locked, lock_on, lock_off;
+/**************************************************************************/
+
+/*---------------------------------------------------------------------------*/
+//TODO// PROCESS(cc2420_process, "CC2420 driver");
+
+//TODO - added for compilation://
+void clock_delay(unsigned int i){}
+/*---------------------------------------------------------------------------*/
+/*---------------------------------------------------------------------------*/
+static int authority_level;
+static uint8_t offset;
+
+int timesynch_authority_level(void)
+{
+  return authority_level;
+}
+uint8_t timesynch_time(void)
+{
+  return rtimer_arch_now() + offset;
+}
+
+void
+cc2420_arch_init(void)
+{
+  spi_init();
+
+  /* all input by default, set these as output */
+  P4DIR |= BV(CSN) | BV(VREG_EN) | BV(RESET_N);
+
+  SPI_DISABLE();                /* Unselect radio. */
+}
+/*---------------------------------------------------------------------------*/
+/****************************************************************************/
+/*							<<< OPERATIONS >>>								*/
+/****************************************************************************/
+// read the rx "len" first bytes from RX fifo to "buf" */
+// the cc2420 RX fifo pointer will proceed automatically */
+static void getrxdata(void *buf, int len)
 {
   FASTSPI_READ_FIFO_NO_WAIT(buf, len);
   rxptr = (rxptr + len) & 0x7f;
 }
-static void
-getrxbyte(uint8_t *byte)
+
+// read the rx fifo first byte at rxptr address and proceed the rxptr
+static void getrxbyte(uint8_t *byte)
 {
   FASTSPI_READ_FIFO_BYTE(*byte);
   rxptr = (rxptr + 1) & 0x7f;
 }
-static void
-flushrx(void)
+
+static void flushrx(void)
 {
   uint8_t dummy;
 
@@ -161,37 +198,34 @@ flushrx(void)
   rxptr = 0;
 }
 /*---------------------------------------------------------------------------*/
-static void
-strobe(enum cc2420_register regname)
+// send strobe command named by "enum cc2420_register"
+static void strobe(enum cc2420_register regname)
 {
   FASTSPI_STROBE(regname);
 }
 /*---------------------------------------------------------------------------*/
-static unsigned int
-status(void)
+// get cc2420 status register
+static unsigned int status(void)
 {
   uint8_t status;
   FASTSPI_UPD_STATUS(status);
   return status;
 }
 /*---------------------------------------------------------------------------*/
-static uint8_t locked, lock_on, lock_off;
-
-static void
-on(void)
+static void on(void)
 {
   ENERGEST_ON(ENERGEST_TYPE_LISTEN);
-  PRINTF("on\n");
+  printf("on\n");
   receive_on = 1;
 
   ENABLE_FIFOP_INT();
   strobe(CC2420_SRXON);
   flushrx();
 }
-static void
-off(void)
+
+static void off(void)
 {
-  PRINTF("off\n");
+  printf("off\n");
   receive_on = 0;
 
   /* Wait for transmission to end before turning radio off. */
@@ -215,35 +249,24 @@ static void RELEASE_LOCK(void) {
   locked = 0;
 }
 /*---------------------------------------------------------------------------*/
-static unsigned
-getreg(enum cc2420_register regname)
+static unsigned getreg(enum cc2420_register regname)
 {
   unsigned reg;
   FASTSPI_GETREG(regname, reg);
   return reg;
 }
 /*---------------------------------------------------------------------------*/
-static void
-setreg(enum cc2420_register regname, unsigned value)
+static void setreg(enum cc2420_register regname, unsigned value)
 {
   FASTSPI_SETREG(regname, value);
 }
 /*---------------------------------------------------------------------------*/
-#define AUTOACK (1 << 4)
-#define ADR_DECODE (1 << 11)
-#define RXFIFO_PROTECTION (1 << 9)
-#define CORR_THR(n) (((n) & 0x1f) << 6)
-#define FIFOP_THR(n) ((n) & 0x7f)
-#define RXBPF_LOCUR (1 << 13);
-/*---------------------------------------------------------------------------*/
-void
-cc2420_set_receiver(void (* recv)(const struct radio_driver *))
+void cc2420_set_receiver(void (* recv)(const struct radio_driver *))
 {
   receiver_callback = recv;
 }
 /*---------------------------------------------------------------------------*/
-void
-cc2420_init(void)
+void cc2420_init(void)
 {
   uint16_t reg;
   {
@@ -304,7 +327,6 @@ cc2420_send(const void *payload, unsigned short payload_len)
   uint8_t total_len;
   struct timestamp timestamp;
 
-
   GET_LOCK();
 
   if(packetbuf_attr(PACKETBUF_ATTR_RADIO_TXPOWER) > 0) {
@@ -313,7 +335,7 @@ cc2420_send(const void *payload, unsigned short payload_len)
     cc2420_set_txpower(CC2420_TXPOWER_MAX);
   }
 
-  PRINTF("cc2420: sending %d bytes\n", payload_len);
+  printf("cc2420: sending %d bytes\n", payload_len);
 
   RIMESTATS_ADD(lltx);
 
@@ -340,7 +362,6 @@ cc2420_send(const void *payload, unsigned short payload_len)
    * transmission starts.
    */
 
-#define LOOP_20_SYMBOLS 400	/* 326us (msp430 @ 2.4576MHz) */
   strobe(CC2420_STXON);
 
   for(i = LOOP_20_SYMBOLS; i > 0; i--) {
@@ -376,7 +397,7 @@ cc2420_send(const void *payload, unsigned short payload_len)
   /* If we are using WITH_SEND_CCA, we get here if the packet wasn't
      transmitted because of other channel activity. */
   RIMESTATS_ADD(contentiondrop);
-  PRINTF("cc2420: do_send() transmission never started\n");
+  printf("cc2420: do_send() transmission never started\n");
   RELEASE_LOCK();
   return -3;			/* Transmission never started! */
 }
@@ -498,26 +519,27 @@ cc2420_interrupt(void)
   return 1;
 }
 /*---------------------------------------------------------------------------*/
+//TODO//  change PROCESS_THREAD to something else
 PROCESS_THREAD(cc2420_process, ev, data)
 {
 	//TODO//   PROCESS_BEGIN();
 
-  PRINTF("cc2420_process: started\n");
+  printf("cc2420_process: started\n");
 
   while(1) {
 	//TODO//     PROCESS_YIELD_UNTIL(ev == PROCESS_EVENT_POLL);
 
     if(receiver_callback != NULL) {
-      PRINTF("cc2420_process: calling receiver callback\n");
+      printf("cc2420_process: calling receiver callback\n");
       receiver_callback(&cc2420_driver);
 
     } else {
-      PRINTF("cc2420_process not receiving function\n");
+      printf("cc2420_process not receiving function\n");
       flushrx();
     }
   }
 
-  PROCESS_END();
+  //TODO//   PROCESS_END();
 }
 /*---------------------------------------------------------------------------*/
 int

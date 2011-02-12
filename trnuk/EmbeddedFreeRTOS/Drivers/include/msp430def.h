@@ -15,7 +15,17 @@ typedef  int32_t   s32_t;
 
 typedef int spl_t;
 void    splx_(spl_t);
-spl_t   splhigh_(void);
+/*
+ * Mask all interrupts that can be masked.
+ */
+spl_t splhigh_(void)
+{
+  /* Clear the GIE (General Interrupt Enable) flag. */
+  int sr;
+  asm("mov r2, %0" : "=r" (sr));
+  asm("bic %0, r2" : : "i" (GIE));
+  return sr & GIE;		/* Ignore other sr bits. */
+}
 
 #define splhigh() splhigh_()
 #define splx(sr) __asm__ __volatile__("bis %0, r2" : : "r" (sr))
