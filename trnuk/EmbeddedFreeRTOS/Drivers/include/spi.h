@@ -1,12 +1,8 @@
-/* -*- C -*- */
-/* @(#)$Id: spi.h,v 1.4 2007/11/18 12:27:44 ksb Exp $ */
-
 #ifndef SPI_H
 #define SPI_H
 
 
 /**************************<<< FROM CONTIKI: contiki-conf.h >>>******************************/
-
 /*
  * SPI bus - CC2420 pin configuration.
  */
@@ -68,13 +64,23 @@ void spi_init(void);
 /***********************************************************
 	FAST SPI: Low level functions
 ***********************************************************/
+// 	  p = pointer to the byte array to be read/written
+// 	  c = the number of bytes to read/write
+// 	  b = single data byte
+// 	  a = register address
 
+
+// writing byte to the spi(uart0) TX buffer
+// the spi(uart0) TX buffer will transmit this byte
+// the FASTSPI_TX will wait until the buffer be ready again
 #define FASTSPI_TX(x)\
 	do {\
 		SPI_TXBUF = x;\
 		SPI_WAITFOREOTx();\
 	} while(0)
 
+// reading byte from the spi(uart0) RX buffer
+// the FASTSPI_RX will wait until the buffer be ready again
 #define FASTSPI_RX(x)\
     do {\
         SPI_TXBUF = 0;\
@@ -82,6 +88,7 @@ void spi_init(void);
 		x = SPI_RXBUF;\
     } while(0)
 
+// reading byte from the spi(uart0) RX buffer to make it empty
 #define FASTSPI_CLEAR_RX(x) do{ SPI_RXBUF; }while(0)
 
 #define FASTSPI_RX_GARBAGE()\
@@ -91,6 +98,8 @@ void spi_init(void);
 		(void)SPI_RXBUF;\
 	} while(0)
 
+// writing byte array "p" sized "c" to the spi(uart0) TX buffer
+// byte by byte
 #define FASTSPI_TX_MANY(p,c)\
 	do {\
         u8_t spiCnt;\
@@ -99,7 +108,8 @@ void spi_init(void);
 		}\
 	} while(0)
 
-
+// reading 2 bytes from the spi(uart0) RX buffer
+// byte by byte
 #define FASTSPI_RX_WORD(x)\
 	 do {\
 	    SPI_TXBUF = 0;\
@@ -110,11 +120,13 @@ void spi_init(void);
 		x |= SPI_RXBUF;\
     } while (0)
 
+// same as FASTSPI_TX
 #define FASTSPI_TX_ADDR(a)\
 	 do {\
 		  SPI_TXBUF = a;\
 		  SPI_WAITFOREOTx();\
 	 } while (0)
+
 
 #define FASTSPI_RX_ADDR(a)\
 	 do {\
@@ -131,6 +143,8 @@ void spi_init(void);
 // 	  a = register address
 // 	  v = register value
 
+// the strobe need only one byte - address, no data is needed
+// the command s is actually the address
 #define FASTSPI_STROBE(s) \
     do {\
 		  SPI_ENABLE();\
@@ -138,6 +152,7 @@ void spi_init(void);
 		  SPI_DISABLE();\
     } while (0)
 
+// set register in address "a"(one byte address) to value "v"(one byte value)
 #define FASTSPI_SETREG(a,v)\
 	 do {\
 		  SPI_ENABLE();\
@@ -147,7 +162,8 @@ void spi_init(void);
 		  SPI_DISABLE();\
 	 } while (0)
 
-
+// get the value stored in register at address "a"(one byte address)
+// to the "v" argument ("v" is one byte length)
 #define FASTSPI_GETREG(a,v)\
 	 do {\
 		  SPI_ENABLE();\
@@ -159,7 +175,8 @@ void spi_init(void);
 	 } while (0)
 
 // Updates the SPI status byte
-
+// in every access to the cc2420 we by get back the status register
+// so, we send nop and as in every other command we get the status register back
 #define FASTSPI_UPD_STATUS(s)\
 	 do {\
 		  SPI_ENABLE();\
@@ -176,6 +193,8 @@ void spi_init(void);
 // 	  c = the number of bytes to read/write
 // 	  b = single data byte
 
+// write to the tx fifo the array "p" size "c"
+// the cc2420 will transmit it by RF
 #define FASTSPI_WRITE_FIFO(p,c)\
 	do {\
 	    SPI_ENABLE();\
@@ -187,6 +206,8 @@ void spi_init(void);
 		SPI_DISABLE();\
     } while (0)
 
+// same as FASTSPI_WRITE_FIFO except that no CS - chip select
+// is change to low and then to high
 #define FASTSPI_WRITE_FIFO_NOCE(p,c)\
 	do {\
 		FASTSPI_TX_ADDR(CC2420_TXFIFO);\
@@ -195,6 +216,7 @@ void spi_init(void);
 		}\
     } while (0)
 
+// read the first byte in the rx fifo to variable "b"
 #define FASTSPI_READ_FIFO_BYTE(b)\
 	 do {\
 		  SPI_ENABLE();\
