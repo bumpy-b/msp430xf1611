@@ -163,7 +163,7 @@ void spi_init(void);
 	 } while (0)
 
 // get the value stored in register at address "a"(one byte address)
-// to the "v" argument ("v" is one byte length)
+// to the "v" argument ("v" is 2 byte length)
 #define FASTSPI_GETREG(a,v)\
 	 do {\
 		  SPI_ENABLE();\
