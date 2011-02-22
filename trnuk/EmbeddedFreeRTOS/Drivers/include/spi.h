@@ -1,5 +1,5 @@
-#ifndef SPI_H
-#define SPI_H
+#ifndef RTOS_SPI_H
+#define RTOS_SPI_H
 
 
 /**************************<<< FROM CONTIKI: contiki-conf.h >>>******************************/
