@@ -15,5 +15,5 @@ void ledFlip(eColor_t colore){
 }
 
 void debugState(eDebugState state) {
-	LED_OUT &= ~STATE7 | state;
+	LED_OUT = state;
 }
