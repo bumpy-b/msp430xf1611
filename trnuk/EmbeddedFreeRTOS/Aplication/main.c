@@ -14,6 +14,9 @@
 #include "debugFunction.h"
 #include "mystdio.h"
 
+/* CC2420 include */
+#include "cc2420.h"
+
 /* LEDs config */
 #define mainLED_TASK_PRIORITY (tskIDLE_PRIORITY + 1)
 
@@ -23,7 +26,7 @@
 static void vTaskLED0( void *pvParameters );
 static void vTaskLED1( void *pvParameters );
 static void vTaskLED2( void *pvParameters );
-static void vTaskPrint( void *pvParameters );
+static void vTaskCC2420( void *pvParameters );
 /*
 * Perform Hardware initialization.
 */
@@ -49,7 +52,7 @@ int main( void )
   xTaskCreate( vTaskLED0, "LED0", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
   xTaskCreate( vTaskLED1, "LED1", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
   xTaskCreate( vTaskLED2, "LED2", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
-  xTaskCreate( vTaskPrint, "PRINT", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
+  xTaskCreate( vTaskCC2420, "CC2420", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
 
   /* Start the scheduler. */
   vTaskStartScheduler();
@@ -61,13 +64,16 @@ int main( void )
 }
 
 /* Second LED flash task */
-static void vTaskPrint( void *pvParameters )
+static void vTaskCC2420( void *pvParameters )
 {
-	int helloCounter = 0;
+	uint8_t temp;
+	cc2420_init();
+
 	while (1)
 	{
-		printf("%s number %d with hex number %x\n","hello",helloCounter,helloCounter);
-		helloCounter++;
+
+		temp = cc2420_status();
+		printf("The status is %x\n",temp);
 		vTaskDelay(1000);
 	}
 }

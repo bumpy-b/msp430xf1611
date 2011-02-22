@@ -6,6 +6,7 @@
 #include "packebuf.h"
 #include "mystdio.h"
 
+
 /*---------------------------------------------------------------------------*/
 static void (* receiver_callback)(const struct radio_driver *);
 
@@ -161,7 +162,7 @@ void cc2420_arch_init(void) {
 	/* all input by default, set these as output */
 	P4DIR |= BV(CSN) | BV(VREG_EN) | BV(RESET_N);
 
-	SPI_DISABLE(); /* Unselect radio. */
+	CC2420_DISABLE(); /* Unselect radio. */
 }
 /*---------------------------------------------------------------------------*/
 /****************************************************************************/
@@ -196,7 +197,7 @@ static void strobe(enum cc2420_register regname) {
 }
 /*---------------------------------------------------------------------------*/
 // get cc2420 status register
-static unsigned int status(void) {
+uint8_t cc2420_status(void) {
 	uint8_t status;
 	FASTSPI_UPD_STATUS(status);
 	return status;
@@ -217,7 +218,7 @@ static void off(void) {
 	receive_on = 0;
 
 	/* Wait for transmission to end before turning radio off. */
-	while (status() & BV(CC2420_TX_ACTIVE))
+	while (cc2420_status() & BV(CC2420_TX_ACTIVE))
 		;
 
 	// turning the RF off page 43
@@ -367,7 +368,7 @@ int cc2420_send(const void *payload, unsigned short payload_len) {
 	RIMESTATS_ADD(lltx);
 
 	/* Wait for any previous transmission to finish. */
-	while (status() & BV(CC2420_TX_ACTIVE))
+	while (cc2420_status() & BV(CC2420_TX_ACTIVE))
 		;
 
 	/* Write packet to TX FIFO:
@@ -409,7 +410,7 @@ int cc2420_send(const void *payload, unsigned short payload_len) {
 
 			/* We wait until transmission has ended so that we get an
 			 accurate measurement of the transmission time.*/
-			while (status() & BV(CC2420_TX_ACTIVE));
+			while (cc2420_status() & BV(CC2420_TX_ACTIVE));
 
 			setup_time_for_transmission = txtime - timestamp.time;
 
@@ -598,11 +599,11 @@ void cc2420_set_channel(int c) {
 	/*
 	 * Writing RAM requires crystal oscillator to be stable.
 	 */
-	while (!(status() & (BV(CC2420_XOSC16M_STABLE))))
+	while (!(cc2420_status() & (BV(CC2420_XOSC16M_STABLE))))
 		;
 
 	/* Wait for any transmission to end. */
-	while (status() & BV(CC2420_TX_ACTIVE))
+	while (cc2420_status() & BV(CC2420_TX_ACTIVE))
 		;
 
 	setreg(CC2420_FSCTRL, f);
@@ -620,7 +621,7 @@ void cc2420_set_pan_addr(unsigned pan, unsigned addr, const uint8_t *ieee_addr) 
 	/*
 	 * Writing RAM requires crystal oscillator to be stable.
 	 */
-	while (!(status() & (BV(CC2420_XOSC16M_STABLE))))
+	while (!(cc2420_status() & (BV(CC2420_XOSC16M_STABLE))))
 		;
 
 	pan_id = pan;
@@ -643,7 +644,7 @@ int cc2420_rssi(void) {
 		radio_was_off = 1;
 		cc2420_on();
 	}
-	while (!(status() & BV(CC2420_RSSI_VALID))) {
+	while (!(cc2420_status() & BV(CC2420_RSSI_VALID))) {
 		/*    printf("cc2420_rssi: RSSI not valid.\n");*/
 	}
 
@@ -654,4 +655,4 @@ int cc2420_rssi(void) {
 	}
 	return rssi;
 }
-/*---------------------------------------------------------------------------*/
+

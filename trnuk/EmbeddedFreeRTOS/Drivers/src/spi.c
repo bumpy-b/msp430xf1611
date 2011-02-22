@@ -20,8 +20,9 @@ spi_init(void)
   U0BR1  = 0;  							  /* Dont need baud rate control register 2 - clear it */
   U0MCTL = 0;						  	  /* Dont need modulation control. */
 
-  P3SEL |= BV(SCK) | BV(MOSI) | BV(MISO); /* Select Peripheral functionality */
+  P3SEL |= BV(SCK) | BV(MOSI) | BV(MISO); /* Select Peripheral functionality and not I/O */
   P3DIR |= BV(SCK) | BV(MISO);	          /* Configure as outputs(SIMO,CLK). */
+  	  	  	  	  	  	  	  	  	  	  /*//TODO: check this names (opposite ?)
   	  	  	  	  	  	  	  	  	  	  /* that don't seem right, maybe should be MOSI ? */
 
 
