@@ -265,7 +265,6 @@ void cc2420_init(void) {
 		FIFOP_INT_INIT(); /* init the pin registers */
 		splx(s);
 	}
-
 	/* Turn on voltage regulator and reset. */
 	SET_VREG_ACTIVE();
 	//clock_delay(250); OK
@@ -274,12 +273,12 @@ void cc2420_init(void) {
 	SET_RESET_INACTIVE();
 	//clock_delay(125); OK
 
-
 	/* Turn on the crystal oscillator. */
 	strobe(CC2420_SXOSCON);
 
 	/* Turn off automatic packet acknowledgment. */
 	reg = getreg(CC2420_MDMCTRL0);
+
 	reg &= ~AUTOACK;
 	setreg(CC2420_MDMCTRL0, reg);
 
@@ -287,6 +286,7 @@ void cc2420_init(void) {
 	reg = getreg(CC2420_MDMCTRL0);
 	reg &= ~ADR_DECODE;
 	setreg(CC2420_MDMCTRL0, reg);
+
 
 	/* Change default values as recomended in the data sheet, */
 	/* correlation threshold = 20 - threshold for detecting IEEE 804.15.4 Stard of Fram Delimiter (SFD)
