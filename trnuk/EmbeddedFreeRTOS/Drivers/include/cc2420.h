@@ -71,6 +71,7 @@ extern int cc2420_authority_level_of_sender;
 
 int cc2420_on(void);
 int cc2420_off(void);
+uint8_t cc2420_status(void);
 
 
 

@@ -39,8 +39,8 @@
 #define MOSI           2  /* P3.2 - Output: SPI Master out - slave in (MOSI) */
 #define MISO           3  /* P3.3 - Input:  SPI Master in - slave out (MISO) */
 
-#define SPI_ENABLE()    ( P4OUT &= ~BV(CSN) ) /* ENABLE CSn (active low) */
-#define SPI_DISABLE()   ( P4OUT |=  BV(CSN) ) /* DISABLE CSn (active low) */
+#define CC2420_ENABLE()    ( P4OUT &= ~BV(CSN) ) /* ENABLE CSn (active low) */
+#define CC2420_DISABLE()   ( P4OUT |=  BV(CSN) ) /* DISABLE CSn (active low) */
 /**************************************************************************************/
 
 extern unsigned char spi_busy;
@@ -112,7 +112,8 @@ void spi_init(void);
 		x |= SPI_RXBUF;\
     } while (0)
 
-// same as FASTSPI_TX
+// sends the address of a register/FIFO for writing mode
+// it is done by leaving the 7th bit low (0)
 #define FASTSPI_TX_ADDR(a)\
 	 do {\
 		  SPI_TXBUF = a;\
@@ -120,16 +121,16 @@ void spi_init(void);
 	 } while (0)
 
 
+// sends the address of a register/FIFO for reading mode
+// by setting the 7th bit
 #define FASTSPI_RX_ADDR(a)\
 	 do {\
 		  SPI_TXBUF = (a) | 0x40;\
 		  SPI_WAITFOREOTx();\
 	 } while (0)
 
-
-
 /***********************************************************
-	FAST SPI: Register access
+	FAST SPI: CC2420 Register access
 ***********************************************************/
 // 	  s = command strobe
 // 	  a = register address
@@ -139,31 +140,31 @@ void spi_init(void);
 // the command s is actually the address
 #define FASTSPI_STROBE(s) \
     do {\
-		  SPI_ENABLE();\
+		  CC2420_ENABLE();\
 		  FASTSPI_TX_ADDR(s);\
-		  SPI_DISABLE();\
+		  CC2420_DISABLE();\
     } while (0)
 
 // set register in address "a"(one byte address) to value "v"(one byte value)
 #define FASTSPI_SETREG(a,v)\
 	 do {\
-		  SPI_ENABLE();\
+		  CC2420_ENABLE();\
 		  FASTSPI_TX_ADDR(a);\
 		  FASTSPI_TX((u8_t) ((v) >> 8));\
 		  FASTSPI_TX((u8_t) (v));\
-		  SPI_DISABLE();\
+		  CC2420_DISABLE();\
 	 } while (0)
 
 // get the value stored in register at address "a"(one byte address)
 // to the "v" argument ("v" is 2 byte length)
 #define FASTSPI_GETREG(a,v)\
 	 do {\
-		  SPI_ENABLE();\
+		  CC2420_ENABLE();\
 		  FASTSPI_RX_ADDR(a);\
 		  v= (u8_t)SPI_RXBUF;\
 		  FASTSPI_RX_WORD(v);\
 		  clock_delay(1);\
-		  SPI_DISABLE();\
+		  CC2420_DISABLE();\
 	 } while (0)
 
 // Updates the SPI status byte
@@ -171,11 +172,11 @@ void spi_init(void);
 // so, we send nop and as in every other command we get the status register back
 #define FASTSPI_UPD_STATUS(s)\
 	 do {\
-		  SPI_ENABLE();\
+		  CC2420_ENABLE();\
 		  SPI_TXBUF = CC2420_SNOP;\
 		  SPI_WAITFOREOTx();\
 		  s = SPI_RXBUF;\
-		  SPI_DISABLE();\
+		  CC2420_DISABLE();\
 	 } while (0)
 
 /***********************************************************
@@ -189,13 +190,13 @@ void spi_init(void);
 // the cc2420 will transmit it by RF
 #define FASTSPI_WRITE_FIFO(p,c)\
 	do {\
-	    SPI_ENABLE();\
+	    CC2420_ENABLE();\
 		u8_t i;\
 		FASTSPI_TX_ADDR(CC2420_TXFIFO);\
 		for (i = 0; i < (c); i++) {\
 		    FASTSPI_TX(((u8_t*)(p))[i]);\
 		}\
-		SPI_DISABLE();\
+		CC2420_DISABLE();\
     } while (0)
 
 // same as FASTSPI_WRITE_FIFO except that no CS - chip select
@@ -211,26 +212,26 @@ void spi_init(void);
 // read the first byte in the rx fifo to variable "b"
 #define FASTSPI_READ_FIFO_BYTE(b)\
 	 do {\
-		  SPI_ENABLE();\
+		  CC2420_ENABLE();\
 		  FASTSPI_RX_ADDR(CC2420_RXFIFO);\
 		  (void)SPI_RXBUF;\
 		  FASTSPI_RX(b);\
   		  clock_delay(1);\
-		  SPI_DISABLE();\
+		  CC2420_DISABLE();\
 	 } while (0)
 
 
 #define FASTSPI_READ_FIFO_NO_WAIT(p,c)\
 	 do {\
 		  u8_t spiCnt;\
-		  SPI_ENABLE();\
+		  CC2420_ENABLE();\
 		  FASTSPI_RX_ADDR(CC2420_RXFIFO);\
 		  (void)SPI_RXBUF;\
 		  for (spiCnt = 0; spiCnt < (c); spiCnt++) {\
 				FASTSPI_RX(((u8_t*)(p))[spiCnt]);\
 		  }\
 		  clock_delay(1);\
-		  SPI_DISABLE();\
+		  CC2420_DISABLE();\
 	 } while (0)
 
 
@@ -238,14 +239,14 @@ void spi_init(void);
 #define FASTSPI_READ_FIFO_GARBAGE(c)\
 	 do {\
 		  u8_t spiCnt;\
-		  SPI_ENABLE();\
+		  CC2420_ENABLE();\
 		  FASTSPI_RX_ADDR(CC2420_RXFIFO);\
 		  (void)SPI_RXBUF;\
 		  for (spiCnt = 0; spiCnt < (c); spiCnt++) {\
 				FASTSPI_RX_GARBAGE();\
 		  }\
   		  clock_delay(1);\
-		  SPI_DISABLE();\
+		  CC2420_DISABLE();\
 	 } while (0)
 
 
@@ -267,25 +268,25 @@ void spi_init(void);
 
 #define FASTSPI_WRITE_RAM_LE(p,a,c,n)\
 	 do {\
-		  SPI_ENABLE();\
+		  CC2420_ENABLE();\
 		  FASTSPI_TX(0x80 | (a & 0x7F));\
 		  FASTSPI_TX((a >> 1) & 0xC0);\
 		  for (n = 0; n < (c); n++) {\
 				FASTSPI_TX(((u8_t*)(p))[n]);\
 		  }\
-		  SPI_DISABLE();\
+		  CC2420_DISABLE();\
 	 } while (0)
 
 #define FASTSPI_READ_RAM_LE(p,a,c,n)\
 	 do {\
-		  SPI_ENABLE();\
+		  CC2420_ENABLE();\
 		  FASTSPI_TX(0x80 | (a & 0x7F));\
 		  FASTSPI_TX(((a >> 1) & 0xC0) | 0x20);\
 		  SPI_RXBUF;\
 		  for (n = 0; n < (c); n++) {\
 				FASTSPI_RX(((u8_t*)(p))[n]);\
 		  }\
-		  SPI_DISABLE();\
+		  CC2420_DISABLE();\
 	 } while (0)
 
 #endif /* SPI_H */

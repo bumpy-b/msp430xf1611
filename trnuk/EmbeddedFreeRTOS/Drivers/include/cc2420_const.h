@@ -126,10 +126,10 @@ enum cc2420_secctrl0 {
 };
 
 /* CC2420 register access functions. */
-unsigned cc2420_status(void);
-unsigned cc2420_getreg(enum cc2420_register regname);
-void     cc2420_setreg(enum cc2420_register regname, unsigned value);
-void     cc2420_strobe(enum cc2420_register regname);
+unsigned char     cc2420_status(void);
+unsigned          cc2420_getreg(enum cc2420_register regname);
+void              cc2420_setreg(enum cc2420_register regname, unsigned value);
+void              cc2420_strobe(enum cc2420_register regname);
 
 /* Page 47. [-38, 26] --> [0, 255]:6 valid bits */
 #define RSSI_OFFSET -38
