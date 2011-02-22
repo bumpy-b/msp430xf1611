@@ -39,14 +39,6 @@
 #define MOSI           2  /* P3.2 - Output: SPI Master out - slave in (MOSI) */
 #define MISO           3  /* P3.3 - Input:  SPI Master in - slave out (MISO) */
 
-/*
- * SPI bus - M25P80 external flash configuration.
- */
-
-#define FLASH_PWR	3	/* P4.3 Output */
-#define FLASH_CS	4	/* P4.4 Output */
-#define FLASH_HOLD	7	/* P4.7 Output */
-
 #define SPI_ENABLE()    ( P4OUT &= ~BV(CSN) ) /* ENABLE CSn (active low) */
 #define SPI_DISABLE()   ( P4OUT |=  BV(CSN) ) /* DISABLE CSn (active low) */
 /**************************************************************************************/
