@@ -30,8 +30,8 @@ spi_init(void)
   U0CTL &= ~SWRST;						  /* Remove RESET */
 
   	  	  	  	  	  	  	  	  	  	  /* here we enable interrupts */
-  IE1 = UTXIE0 | URXIE0;
-  IFG1 &= ~URXIFG0 & ~UTXIFG0;
+ // IE1 = UTXIE0 | URXIE0;
+ // IFG1 &= ~URXIFG0 & ~UTXIFG0;
 
   spi_inited = 1; 						/* finish init */
 }
