@@ -17,19 +17,19 @@ typedef enum{
 }eColor_t;
 
 typedef enum {
-	STATE0 = 0,
-	STATE1 = RED,
-	STATE2 = GREEN,
-	STATE3 = RED | GREEN,
-	STATE4 = BLUE,
-	STATE5 = BLUE | RED,
-	STATE6 = BLUE | GREEN,
-	STATE7 = BLUE | GREEN | RED,
+	STATE0 = BLUE | GREEN | RED,
+	STATE1 = ~BLUE,
+	STATE2 = ~GREEN,
+	STATE3 = ~(BLUE | GREEN),
+	STATE4 = ~RED,
+	STATE5 = ~(BLUE | RED),
+	STATE6 = ~(RED | GREEN),
+	STATE7 = 0,
 }eDebugState;
 
 void ledOn(eColor_t color);
 void ledOff(eColor_t color);
 void ledFlip(eColor_t color);
-
+void debugState(eDebugState state);
 
 #endif /* DEBUGFUNCTION_H_ */
