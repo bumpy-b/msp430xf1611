@@ -260,9 +260,9 @@ void cc2420_init(void) {
 	uint16_t reg;
 	{
 		int s = splhigh();
-		cc2420_arch_init(); /* Initalize ports and SPI. */
-		DISABLE_FIFOP_INT(); /* disable interrupts ftom FIFOP */
-		FIFOP_INT_INIT(); /* init the pin registers */
+		cc2420_arch_init();          /* Initalize ports and SPI. */
+		DISABLE_FIFOP_INT();         /* disable interrupts ftom FIFOP */
+		FIFOP_INT_INIT();            /* init the pin registers */
 		splx(s);
 	}
 	/* Turn on voltage regulator and reset. */
@@ -278,7 +278,6 @@ void cc2420_init(void) {
 
 	/* Turn off automatic packet acknowledgment. */
 	reg = getreg(CC2420_MDMCTRL0);
-
 	reg &= ~AUTOACK;
 	setreg(CC2420_MDMCTRL0, reg);
 
@@ -286,7 +285,6 @@ void cc2420_init(void) {
 	reg = getreg(CC2420_MDMCTRL0);
 	reg &= ~ADR_DECODE;
 	setreg(CC2420_MDMCTRL0, reg);
-
 
 	/* Change default values as recomended in the data sheet, */
 	/* correlation threshold = 20 - threshold for detecting IEEE 804.15.4 Stard of Fram Delimiter (SFD)

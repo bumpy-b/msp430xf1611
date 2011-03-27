@@ -67,7 +67,9 @@ int main( void )
 static void vTaskCC2420( void *pvParameters )
 {
 	uint8_t temp;
+
 	cc2420_init();
+	cc2420_on();
 
 	while (1)
 	{
