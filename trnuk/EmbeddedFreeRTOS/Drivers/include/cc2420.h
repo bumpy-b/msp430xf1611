@@ -4,6 +4,8 @@
 #include "FreeRTOS.h"
 #include "cc2420_const.h"
 
+#define CC2420_MAX_PACKET_LEN      127
+
 /* The CC2420 reset pin. */
 #define SET_RESET_INACTIVE()    ( P4OUT |=  BV(RESET_N) )
 #define SET_RESET_ACTIVE()      ( P4OUT &= ~BV(RESET_N) )
@@ -33,12 +35,18 @@
  */
 //--------------------------------------------------------------------
 
-void cc2420_init(void);
+/* functions */
 
-#define CC2420_MAX_PACKET_LEN      127
+void cc2420_init(void);
 
 void cc2420_set_channel(int channel);
 int cc2420_get_channel(void);
+
+int cc2420_rssi(void);
+
+int cc2420_on(void);
+int cc2420_off(void);
+uint8_t cc2420_status(void);
 
 void cc2420_set_pan_addr(unsigned pan,
 				unsigned addr,
@@ -47,7 +55,7 @@ void cc2420_set_pan_addr(unsigned pan,
 extern signed char cc2420_last_rssi;
 extern uint8_t cc2420_last_correlation;
 
-int cc2420_rssi(void);
+
 
 extern const struct radio_driver cc2420_driver;
 
@@ -63,15 +71,14 @@ int cc2420_get_txpower(void);
  * Interrupt function, called from the simple-cc2420-arch driver.
  *
  */
+
 int cc2420_interrupt(void);
 
 /* XXX hack: these will be made as Chameleon packet attributes */
 extern uint8_t cc2420_time_of_arrival, cc2420_time_of_departure;
 extern int cc2420_authority_level_of_sender;
 
-int cc2420_on(void);
-int cc2420_off(void);
-uint8_t cc2420_status(void);
+
 
 
 
