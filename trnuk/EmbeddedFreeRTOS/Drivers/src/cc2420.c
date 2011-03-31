@@ -197,7 +197,7 @@ int cc2420_simplerecv()
 {
 	uint8_t len = 0;
 
-	volatile int i =0;
+	volatile long i =0;
 	//P1IES |= FIFOP_P;
 	/* clear SFD flag */
 	//P1IFG &= ~SFD;
@@ -207,15 +207,15 @@ int cc2420_simplerecv()
 	strobe(CC2420_SRFOFF);
 	strobe(CC2420_SFLUSHRX);
 	strobe(CC2420_SRXON);
-
+	printf("Waiting for packet ...\n");
 	while (!FIFOP_IS_1)
 	{
 		i++;
-		if (i>1000)
+		if (i>5000)
 			return 0;
 	}
-
-	getrxbyte(&len);
+	printf("Got a packet !!!\n");
+//	getrxbyte(&len);
 
 	return len;
 }
@@ -230,7 +230,10 @@ int cc2420_on(void) {
 	printf("on\n");
 
 	/* enable fifop interrupts */
-	ENABLE_FIFOP_INT();
+
+	// TODO: check how to handle interrupts
+
+//	ENABLE_FIFOP_INT();
 	/* start receive mode */
 	strobe(CC2420_SRXON);
 	//strobe(CC2420_SRFOFF);

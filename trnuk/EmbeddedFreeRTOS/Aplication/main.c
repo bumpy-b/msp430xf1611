@@ -22,9 +22,9 @@
 /*
 * The LEDs flashing tasks
 */
-//static void vTaskLED0( void *pvParameters );
-//static void vTaskLED1( void *pvParameters );
-//static void vTaskLED2( void *pvParameters );
+static void vTaskLED0( void *pvParameters );
+static void vTaskLED1( void *pvParameters );
+static void vTaskLED2( void *pvParameters );
 static void vTaskCC2420_send( void *pvParameters );
 static void vTaskCC2420_recv( void *pvParameters );
 /*
@@ -51,9 +51,9 @@ int main( void )
   /* Start the LEDs tasks */
 //  xTaskCreate( vTaskLED0, "LED0", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
 //  xTaskCreate( vTaskLED1, "LED1", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
-//  xTaskCreate( vTaskLED2, "LED2", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
-    xTaskCreate( vTaskCC2420_send, "CC2420_send", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
- // xTaskCreate( vTaskCC2420_recv, "CC2420_recv", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
+  xTaskCreate( vTaskLED2, "LED2", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
+ //   xTaskCreate( vTaskCC2420_send, "CC2420_send", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
+  xTaskCreate( vTaskCC2420_recv, "CC2420_recv", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
 
 
   /* Start the scheduler. */
