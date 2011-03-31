@@ -32,7 +32,6 @@ spl_t splhigh_(void)
 #define splhigh() splhigh_()
 #define splx(sr) __asm__ __volatile__("bis %0, r2" : : "r" (sr))
 
-#define splhigh() splhigh_()
 
 
 #endif /* MSP430DEF_H_ */
