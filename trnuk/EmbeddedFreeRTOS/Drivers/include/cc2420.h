@@ -57,8 +57,6 @@ extern uint8_t cc2420_last_correlation;
 
 
 
-extern const struct radio_driver cc2420_driver;
-
 /**
  * \param power Between 1 and 31.
  */
