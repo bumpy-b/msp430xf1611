@@ -23,9 +23,9 @@
 /*
 * The LEDs flashing tasks
 */
-static void vTaskLED0( void *pvParameters );
-static void vTaskLED1( void *pvParameters );
-static void vTaskLED2( void *pvParameters );
+//static void vTaskLED0( void *pvParameters );
+//static void vTaskLED1( void *pvParameters );
+//static void vTaskLED2( void *pvParameters );
 static void vTaskCC2420( void *pvParameters );
 /*
 * Perform Hardware initialization.
@@ -49,9 +49,9 @@ int main( void )
   ledOff(RED);
 
   /* Start the LEDs tasks */
-  xTaskCreate( vTaskLED0, "LED0", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
-  xTaskCreate( vTaskLED1, "LED1", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
-  xTaskCreate( vTaskLED2, "LED2", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
+//  xTaskCreate( vTaskLED0, "LED0", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
+//  xTaskCreate( vTaskLED1, "LED1", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
+//  xTaskCreate( vTaskLED2, "LED2", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
   xTaskCreate( vTaskCC2420, "CC2420", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
 
   /* Start the scheduler. */
@@ -66,17 +66,28 @@ int main( void )
 /* Second LED flash task */
 static void vTaskCC2420( void *pvParameters )
 {
-	uint8_t temp;
 
+	const char buf[10] = "hello";
+	char temp[5];
+	int size;
+
+    printf("starting debug\n");
+    printf("buffer is %s\n",buf);
 	cc2420_init();
+	cc2420_printState();
 	cc2420_on();
-
+	cc2420_printState();
+	debugState(STATE0);
+	cc2420_printState();
+	printf("status is %x\n",cc2420_status());
+	cc2420_send(buf,1);
 	while (1)
 	{
-
-		temp = cc2420_status();
-		printf("The status is %x\n",temp);
-		vTaskDelay(1000);
+		cc2420_printState();
+		printf("status is %x\n",cc2420_status());
+		vTaskDelay(2000);
+//		size = cc2420_read(temp,1);
+//        printf("got %d size, and data is %d\n",size,*temp);
 	}
 }
 
