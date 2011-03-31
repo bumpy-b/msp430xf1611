@@ -26,6 +26,20 @@
 #define LOOP_20_SYMBOLS 400	/* 326us (msp430 @ 2.4576MHz) */
 #define GET_LOCK() locked = 1
 
+/******************/
+#define CC2420_IO_INIT() do \
+{ \
+    P1SEL &= ~(FIFOP_PIN | FIFO_PIN | SFD_PIN | CCA_PIN | RESETn_PIN); \
+    P1DIR &= ~(FIFOP_PIN | FIFO_PIN | SFD_PIN | CCA_PIN); \
+    P1DIR |= RESETn_PIN; \
+    P1OUT &= ~RESETn_PIN; \
+    P1IE  &= ~(FIFOP_PIN | FIFO_PIN | SFD_PIN | CCA_PIN | RESETn_PIN); \
+    \
+    P3SEL &= ~VREGEN_PIN; \
+    P3DIR |= VREGEN_PIN; \
+    P3OUT &= ~VREGEN_PIN; \
+} while (0)
+/*****************/
 
 /* declarations */
 static void flushrx(void);
@@ -51,7 +65,7 @@ void clock_delay(unsigned int i) {
 	{
 		v++;
 	}*/
-
+     //vTaskDelay(i);
 	 asm("add #-1, r15");
 	 asm("jnz $-2");
 }
@@ -109,11 +123,11 @@ void cc2420_init(void) {
 	}
 	/* Turn on voltage regulator and reset. */
 	SET_VREG_ACTIVE();
-	clock_delay(2500);
+	clock_delay(250);
 	SET_RESET_ACTIVE();
-	clock_delay(1270);
+	clock_delay(127);
 	SET_RESET_INACTIVE();
-	clock_delay(1250);
+	clock_delay(125);
 
 	/* Turn on the crystal oscillator. */
 	strobe(CC2420_SXOSCON);
@@ -129,9 +143,9 @@ void cc2420_init(void) {
 	setreg(CC2420_MDMCTRL0, reg);
 
 	/* This value is from the cc2420 data sheet */
-	setreg(CC2420_MDMCTRL1, CORR_THR(20));
-	reg = getreg(CC2420_RXCTRL1);
+//	setreg(CC2420_MDMCTRL1, CORR_THR(20));
 
+	reg = getreg(CC2420_RXCTRL1);
 	/* should be set to 1 by cc2420 data sheet */
 	reg |= RXBPF_LOCUR;
 	setreg(CC2420_RXCTRL1, reg);
@@ -145,13 +159,66 @@ void cc2420_init(void) {
 	setreg(CC2420_SECCTRL0, reg);
 
 	/* set the pan address */
-	cc2420_set_pan_addr(0xffff, 0x0000, NULL);
+//	cc2420_set_pan_addr(0xffff, 0x0000, NULL);
 
 	/* set channel */
-	cc2420_set_channel(12);
+//	cc2420_set_channel(12);
 
 }
+int cc2420_simplesend()
+{
+	uint8_t total_len = 1;
+	int i;
+	char frame[10] = "hello";
 
+	//while (cc2420_status() & CC2420_TX_ACTIVE) {}
+
+	strobe(CC2420_SRFOFF);
+	strobe(CC2420_SFLUSHTX);
+
+
+	FASTSPI_WRITE_FIFO(&total_len, 6);
+	FASTSPI_WRITE_FIFO(frame,6);
+
+	strobe(CC2420_STXON);
+
+	for (i=0; i<1000; i++)
+	{
+		if (SFD_IS_1)
+		{
+			printf("send: SFD is 1 !!!!!!!!!! \n");
+		}
+	}
+}
+
+static void getrxbyte(uint8_t *byte);
+
+int cc2420_simplerecv()
+{
+	uint8_t len = 0;
+
+	volatile int i =0;
+	//P1IES |= FIFOP_P;
+	/* clear SFD flag */
+	//P1IFG &= ~SFD;
+
+	/* int enable for SFD */
+	//P1IE |= SFD;
+	strobe(CC2420_SRFOFF);
+	strobe(CC2420_SFLUSHRX);
+	strobe(CC2420_SRXON);
+
+	while (!FIFOP_IS_1)
+	{
+		i++;
+		if (i>1000)
+			return 0;
+	}
+
+	getrxbyte(&len);
+
+	return len;
+}
 /*---------------------------------------------------------------------------*/
 /* starts the cc2420 - after init was done */
 int cc2420_on(void) {
@@ -197,7 +264,7 @@ void cc2420_printState()
 {
 	static volatile unsigned lastState;
 	//if (lastState != cc2420_getstate())
-		printf("state is %d\n",cc2420_getstate());
+		printf("state is %d, status is %x\n",cc2420_getstate(),cc2420_status());
 	lastState = cc2420_getstate();
 
 }
@@ -238,19 +305,23 @@ int cc2420_send(const void *payload, unsigned short payload_len) {
 	 */
 
 	// enable starting transmission
-	strobe(CC2420_STXON);
+ 	strobe(CC2420_STXON);
 	cc2420_printState();
 
+	vTaskDelay(100);
 	/* now we wait for SFD to start */
 
 	for (i = LOOP_20_SYMBOLS; i > 0; i--) {
-		clock_delay(200);
+
+
+		//clock_delay(1);
 		//cc2420_printState();
 		// the SFD bit will rise up when the Start of Frame Delimiter
 		// sent OK, that indicate that the frame is being sending right now
 		// this bit must be raised maximum after LOOP_20_SYMBOLS -
 		// the preamble (8 symbols) is started 12 symbols period after the command strobe.
 		if (SFD_IS_1) {
+			debugState(STATE5);
 			printf("SFD is 1\n");
 			cc2420_printState();
 			/* We wait until transmission has ended so that we get an
