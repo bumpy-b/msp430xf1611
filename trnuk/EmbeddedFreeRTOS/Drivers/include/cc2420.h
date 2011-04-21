@@ -46,8 +46,12 @@ int cc2420_rssi(void);
 
 int cc2420_on(void);
 int cc2420_off(void);
+void CC2420_printMap();
+int cc2420_simplesend(uint8_t *buf,int len);
+int cc2420_simplerecv(uint8_t *buf,uint8_t *who);
+void cc2420_sendID(uint8_t id);
 uint8_t cc2420_status(void);
-
+uint8_t cc2420_getID();
 void cc2420_set_pan_addr(unsigned pan,
 				unsigned addr,
 				const uint8_t *ieee_addr);

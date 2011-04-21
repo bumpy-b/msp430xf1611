@@ -26,7 +26,7 @@
 #define LOOP_20_SYMBOLS 400	/* 326us (msp430 @ 2.4576MHz) */
 #define MAX_DATA 20
 #define GET_LOCK() locked = 1
-
+#define localID 200
 /******************/
 #define CC2420_IO_INIT() do \
 { \
@@ -55,6 +55,8 @@ void cc2420_set_channel(int c);
 static uint8_t receive_on;
 static uint16_t pan_id;
 static int channel;
+static volatile uint8_t lock = 0;
+static uint8_t map[4] = {0,0,0,0};
 /*------------------------------------------*/
 
 /* simple clock delay */
@@ -170,21 +172,24 @@ void cc2420_init(void) {
  * returns the number of bytes sent, or 0 if failed
  */
 
-int cc2420_simplesend(char *buf,int len)
+int cc2420_simplesend(uint8_t *buf,int len)
 {
 	int i;
-    char dummy = 'x';
+	uint8_t id = localID;
 
-	//while (cc2420_status() & CC2420_TX_ACTIVE) {}
 
+
+	while (lock == 1) {}
+	lock = 1;
+	while (cc2420_status() & BV(CC2420_TX_ACTIVE)) {}
 	strobe(CC2420_SRFOFF);
 	strobe(CC2420_SFLUSHTX);
 
 
 	FASTSPI_WRITE_FIFO(&len, 1);
+	FASTSPI_WRITE_FIFO(&id,1);
 	FASTSPI_WRITE_FIFO(buf,len);
-	FASTSPI_WRITE_FIFO(&dummy,1);
-	FASTSPI_WRITE_FIFO(&dummy,1);
+
 
 
 	strobe(CC2420_STXON);
@@ -193,10 +198,12 @@ int cc2420_simplesend(char *buf,int len)
 	{
 		if (SFD_IS_1)
 		{
+			printf("SFD is 1 !\n");
+			lock = 0;
 			return len;
 		}
 	}
-
+    lock = 0;
 	return 0;
 }
 
@@ -207,7 +214,7 @@ static void getrxdata(void *buf, int len);
 /* simple recv function that will wait 50,000 cycles for
  * a mark that a packet is here
  */
-int cc2420_simplerecv(char *buf)
+int cc2420_simplerecv(uint8_t *buf,uint8_t *who)
 {
 	uint8_t len = 0;
 	volatile long i =0;
@@ -232,7 +239,19 @@ int cc2420_simplerecv(char *buf)
 
 	getrxbyte(&len);
 
-    getrxdata(buf,len);
+    printf("Got len %d\n",len);
+
+	if (len >= 200)
+	{
+		/* this is ID */
+
+		if (map[200 - len] == 0)
+			printf("New device on network, ID %d\n",len);
+		map[200 - len] = len;
+		return 0;
+	}
+	getrxbyte(who);
+	getrxdata(buf,len);
 
 	return len;
 }
@@ -243,8 +262,6 @@ int cc2420_on(void) {
 	if (receive_on) {
 			return 1;
 	}
-
-	printf("on\n");
 
 	/* enable fifop interrupts */
 
@@ -367,3 +384,52 @@ getrxbyte(uint8_t *byte)
   FASTSPI_READ_FIFO_BYTE(*byte);
 }
 
+void CC2420_printMap()
+{
+	int i;
+	printf("\n\nKnown CC2420 devices: \n");
+    printf("Local Device ID: %d\n",localID);
+	for (i=0; i<4; i++)
+	{
+		if (map[i]>0)
+			printf("Device ID: %d\n",map[i]);
+	}
+}
+
+void cc2420_sendID(uint8_t id)
+{
+	int i;
+
+
+
+	while (lock == 1) {}
+	lock = 1;
+
+	while (cc2420_status() & BV(CC2420_TX_ACTIVE)) {}
+	strobe(CC2420_SRFOFF);
+	strobe(CC2420_SFLUSHTX);
+
+
+	FASTSPI_WRITE_FIFO(&id, 1);
+	FASTSPI_WRITE_FIFO(&id, 1);
+	FASTSPI_WRITE_FIFO(&id, 1);
+
+
+
+	strobe(CC2420_STXON);
+
+	for (i=0; i<20000; i++)
+	{
+		if (SFD_IS_1)
+		{
+			lock = 0;
+			return;
+		}
+	}
+    lock = 0;
+	return;
+}
+uint8_t cc2420_getID()
+{
+	return localID;
+}

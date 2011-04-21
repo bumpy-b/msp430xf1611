@@ -30,6 +30,8 @@ typedef enum {
 void ledOn(eColor_t color);
 void ledOff(eColor_t color);
 void ledFlip(eColor_t color);
+char *ledState(eColor_t color);
+
 void debugState(eDebugState state);
 
 #endif /* DEBUGFUNCTION_H_ */

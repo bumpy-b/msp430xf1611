@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
-
+#include <string.h>
 #include "serial.h"
 #include "io.h"
 /* Scheduler includes. */
@@ -19,14 +19,15 @@
 
 /* LEDs config */
 #define mainLED_TASK_PRIORITY (tskIDLE_PRIORITY + 1)
+
+#define MAX_MSG 20
 /*
 * The LEDs flashing tasks
 */
-static void vTaskLED0( void *pvParameters );
-static void vTaskLED1( void *pvParameters );
-static void vTaskLED2( void *pvParameters );
+static void vTaskRx         ( void *pvParameters );
+static void vTaskSHELL      ( void *pvParameters );
 static void vTaskCC2420_send( void *pvParameters );
-static void vTaskCC2420_recv( void *pvParameters );
+static void vTaskBROADCAST  ( void *pvParameters );
 /*
 * Perform Hardware initialization.
 */
@@ -35,6 +36,7 @@ static void prvSetupHardware( void );
 /* serial uart device */
 static uint16_t uxBufferLength = 255;
 static eBaud eBaudRate = ser2400;
+uint8_t msg[MAX_MSG];
 xComPortHandle xPort;
 
 /*---------------------------------------------------*/
@@ -49,11 +51,11 @@ int main( void )
   ledOff(RED);
 
   /* Start the LEDs tasks */
-//  xTaskCreate( vTaskLED0, "LED0", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
-//  xTaskCreate( vTaskLED1, "LED1", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
-  xTaskCreate( vTaskLED2, "LED2", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
-  xTaskCreate( vTaskCC2420_send, "CC2420_send", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
-//  xTaskCreate( vTaskCC2420_recv, "CC2420_recv", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
+  xTaskCreate( vTaskRx, "RX", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
+  xTaskCreate( vTaskSHELL, "SHELL", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
+//  xTaskCreate( vTaskLED2, "LED2", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
+//  xTaskCreate( vTaskCC2420_send, "CC2420_send", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
+//  xTaskCreate( vTaskBROADCAST, "BROADCAST", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
 
 
   /* Start the scheduler. */
@@ -66,98 +68,151 @@ int main( void )
 }
 
 /* Second LED flash task */
-static void vTaskCC2420_recv ( void *pvParameters)
+static void vTaskBROADCAST ( void *pvParameters)
 {
-	    int len;
-	    char msg[20];
-
-	    printf("starting task recv\n");
-
-		cc2420_init();
-		cc2420_printState();
-		cc2420_on();
-		cc2420_printState();
-		cc2420_printState();
-		printf("status is %x\n",cc2420_status());
 		while (1)
 		{
-			zeros(msg,20);
-			cc2420_printState();
-	    	len = cc2420_simplerecv(&msg);
-	        printf("got %d length\n",len);
-
-	        msg[len] = 0;
-	        printf("Message is %s\n",msg);
-			vTaskDelay(2000);
+			printf("Sending BROADCAST ID\n");
+			cc2420_sendID(cc2420_getID());
+			vTaskDelay(7000);
 
 		}
 }
 static void vTaskCC2420_send( void *pvParameters )
 {
     char b = 'a';
-    int size;
-    char temp = 0;
+    uint8_t msg[20] = "Hello!";
 
     printf("starting task send\n");
     printf("buffer is %c\n",b);
-	cc2420_init();
-	cc2420_printState();
-	cc2420_on();
-	cc2420_printState();
-	debugState(STATE0);
-	cc2420_printState();
-	printf("status is %x\n",cc2420_status());
+
 	while (1)
 	{
-		cc2420_printState();
-		cc2420_simplesend();
-		vTaskDelay(2000);
-	//	size = cc2420_simplerecv();
-    //    printf("got %d size\n",size);
+		printf("Sending ..\n");
+		cc2420_simplesend(msg,10);
+		vTaskDelay(2500);
 	}
 }
 
-/* First LED flash task */
-static void vTaskLED0( void *pvParameters )
+/* This task is an echo repeater
+ * it will show all the chars inputed
+ * to putty
+ */
+static void vTaskRx( void *pvParameters )
 {
-
+  int len;
+  uint8_t who;
   while (1)
   {
-	  if (hasRxData())
-		  putchar(getchar());
 
-    /* Toggle blue LED and wait 500 ticks */
-	//  printf("BIT BLUE %s number with hex number \n","hello");
+	  zeros(msg,20);
+	  len = cc2420_simplerecv(msg,&who);
+	  if (len == 0)
+		  continue;
 
-	//  printf("hello\n");
-//	 if (U1RXBUF != ch)
- // 	{
-  //		ledFlip(BIT_BLUE);
-  //	}
-    vTaskDelay(500);
+	  msg[len-2] = 0;
+	  printf("\nCC2420 incoming message from device %d: %s\n",who,msg);
+	  printf("cmd : > ");
+	  vTaskDelay(2000);
   }
 }
 
+void process_cmd(char *msg);
 /* Second LED flash task */
-static void vTaskLED1( void *pvParameters )
+static void vTaskSHELL( void *pvParameters )
 {
+	char ch;
+
+    int index = 0;
+
+	printf("Starting FreeRTOS Shell for MSP430 V1.0\n"
+           "Initialization of UART ...\n"
+		   "Initialization of CC2420 ...\n");
+	printf("For Help type 'help' \n");
+	printf("cmd : > ");
+
   while (1)
   {
     /* Toggle green LED and wait 1000 ticks */
-  	ledFlip(GREEN);
-    vTaskDelay(1000);
+    if (hasRxData())
+    {
+	 	  ch = getchar();
+        //  printf("Index is %d\n",index);
+
+          if (ch == 127)
+          {
+
+        	  if (index <= 0)
+        		  continue;
+        	  index--;
+        	  msg[index]=0;
+        	  putchar(ch);
+        	  continue;
+
+          }
+
+
+	 	  putchar(ch);
+
+	 	  msg[index++] = ch;
+	 	  if (index > MAX_MSG)
+	 		 	          {
+	 		 printf("\ncmd too long !\ncmd: > ");
+	 		 index = 0;
+	 	  }
+
+	 	 if (ch == 13)
+	 	 {
+	 		 process_cmd(msg);
+	         printf("\ncmd : > ");
+    	     index = 0;
+	 	  }
+	 	  ledFlip(BLUE);
+    }
+
+    vTaskDelay(50);
   }
 }
 
-/* Third LED flash task */
-static void vTaskLED2( void *pvParameters )
+/* Some Processing functions */
+
+void process_cmd(char *msg)
 {
-  while (1)
-  {
-    /* Toggle red LED and wait 2000 ticks */
-		ledFlip(RED);
-		vTaskDelay(2000);
-  }
+	if (msg[0]==13)
+		return;
+
+	if (strncmp(msg,"help",strlen("help")) == 0)
+	{
+		printf("\n\nstatus           - shows the status of the platform\n"
+			   "map              - shows others CC2420 MSP active\n"
+			   "send <str>       - sends a message in brodcast\n");
+		return;
+	}
+
+	if (strncmp(msg,"status",strlen("status")) == 0)
+	{
+		printf("\n\n - MSP430 status - \n"
+			   "Red Led is %s\n"
+			   "Blue Led is %s\n"
+			   "Green Led is %s\n"
+			   "CC2420 Status register is %x\n"
+			   "CC2420 Receiver is %s\n"
+			   ,ledState(RED)
+			   ,ledState(BLUE)
+			   ,ledState(GREEN)
+			   ,cc2420_status()
+			   ,"On"
+			   );
+		return;
+	}
+
+	if (strncmp(msg,"map",strlen("map")) == 0)
+	{
+		CC2420_printMap();
+		return;
+	}
+	printf("\nUnknown Command %s \n",msg);
+
 }
 
 static void prvSetupHardware( void )
@@ -165,28 +220,18 @@ static void prvSetupHardware( void )
 //  int i;
 
   /* Stop the watchdog timer. */
-  WDTCTL = WDTPW|WDTHOLD;
+  WDTCTL = WDTPW | WDTHOLD;
   /* initial UART device */
   xPort = xSerialPortInitMinimal(eBaudRate, uxBufferLength );
-
-  /* Setup MCLK 8MHz and SMCLK 1MHz */
-//  DCOCTL = 0;
-//  BCSCTL1 = 0;
-//  BCSCTL2 = SELM_2 | (SELS | DIVS_3) ;
-
-  /* Wait for cristal to stabilize */
-//  do {
-    /* Clear OSCFault flag */
-//    IFG1 &= ~OFIFG;
-    /* Time for flag to set */
-//    for (i = 0xff; i > 0; i--) nop();
-//  } while ((IFG1 & OFIFG) != 0);
 
   /* Configure IO for LED use */
   P5SEL &= ~(BIT_BLUE | BIT_GREEN | BIT_RED);
   P5OUT &= ~(BIT_BLUE | BIT_GREEN | BIT_RED);
   P5DIR |= (BIT_BLUE | BIT_GREEN | BIT_RED);
 
+  /* CC2420 init */
+  cc2420_init();
+  cc2420_on();
 }
 
 
