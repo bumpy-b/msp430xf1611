@@ -24,6 +24,7 @@
 #define AUX_LEN (CHECKSUM_LEN + TIMESTAMP_LEN + FOOTER_LEN)
 
 #define LOOP_20_SYMBOLS 400	/* 326us (msp430 @ 2.4576MHz) */
+#define MAX_DATA 20
 #define GET_LOCK() locked = 1
 
 /******************/
@@ -52,7 +53,6 @@ void cc2420_set_channel(int c);
 /* global vars */
 
 static uint8_t receive_on;
-static uint8_t locked, lock_on, lock_off;
 static uint16_t pan_id;
 static int channel;
 /*------------------------------------------*/
@@ -165,11 +165,15 @@ void cc2420_init(void) {
 //	cc2420_set_channel(12);
 
 }
-int cc2420_simplesend()
+
+/* simple send function - sends the buffer of len
+ * returns the number of bytes sent, or 0 if failed
+ */
+
+int cc2420_simplesend(char *buf,int len)
 {
-	uint8_t total_len = 1;
 	int i;
-	char frame[10] = "hello";
+    char dummy = 'x';
 
 	//while (cc2420_status() & CC2420_TX_ACTIVE) {}
 
@@ -177,27 +181,37 @@ int cc2420_simplesend()
 	strobe(CC2420_SFLUSHTX);
 
 
-	FASTSPI_WRITE_FIFO(&total_len, 6);
-	FASTSPI_WRITE_FIFO(frame,6);
+	FASTSPI_WRITE_FIFO(&len, 1);
+	FASTSPI_WRITE_FIFO(buf,len);
+	FASTSPI_WRITE_FIFO(&dummy,1);
+	FASTSPI_WRITE_FIFO(&dummy,1);
+
 
 	strobe(CC2420_STXON);
 
-	for (i=0; i<1000; i++)
+	for (i=0; i<20000; i++)
 	{
 		if (SFD_IS_1)
 		{
-			printf("send: SFD is 1 !!!!!!!!!! \n");
+			return len;
 		}
 	}
+
+	return 0;
 }
 
 static void getrxbyte(uint8_t *byte);
+static void getrxdata(void *buf, int len);
 
-int cc2420_simplerecv()
+
+/* simple recv function that will wait 50,000 cycles for
+ * a mark that a packet is here
+ */
+int cc2420_simplerecv(char *buf)
 {
 	uint8_t len = 0;
-
 	volatile long i =0;
+
 	//P1IES |= FIFOP_P;
 	/* clear SFD flag */
 	//P1IFG &= ~SFD;
@@ -207,15 +221,18 @@ int cc2420_simplerecv()
 	strobe(CC2420_SRFOFF);
 	strobe(CC2420_SFLUSHRX);
 	strobe(CC2420_SRXON);
-	printf("Waiting for packet ...\n");
+
 	while (!FIFOP_IS_1)
 	{
 		i++;
-		if (i>5000)
+		/* too much time */
+		if (i>50000)
 			return 0;
 	}
-	printf("Got a packet !!!\n");
-//	getrxbyte(&len);
+
+	getrxbyte(&len);
+
+    getrxdata(buf,len);
 
 	return len;
 }
@@ -271,77 +288,7 @@ void cc2420_printState()
 	lastState = cc2420_getstate();
 
 }
-/*---------------------------------------------------------------------------*/
-int cc2420_send(const void *payload, unsigned short payload_len) {
-	int i;
-	uint8_t total_len;
 
-	printf("cc2420: sending %d bytes\n", payload_len);
-
-
-
-	/* set TX power to max */
-	cc2420_set_txpower(CC2420_TXPOWER_MAX);
-
-	/* Wait for any previous transmission to finish. */
-	while (cc2420_status() & BV(CC2420_TX_ACTIVE));
-
-	/* Write packet to TX FIFO:
-	 * flush
-	 * length
-	 * payload
-	 */
-	strobe(CC2420_SFLUSHTX);
-	cc2420_printState();
-	total_len = payload_len;
-	FASTSPI_WRITE_FIFO(&total_len, 1);
-	cc2420_printState();
-	FASTSPI_WRITE_FIFO(payload, payload_len);
-	cc2420_printState();
-
-	/* The TX FIFO can only hold one packet. Make sure to not overrun
-	 * FIFO by waiting for transmission to start here and synchronizing
-	 * with the CC2420_TX_ACTIVE check in cc2420_send.
-	 *
-	 * Note that we may have to wait up to 320 us (20 symbols) before
-	 * transmission starts.
-	 */
-
-	// enable starting transmission
- 	strobe(CC2420_STXON);
-	cc2420_printState();
-
-	vTaskDelay(100);
-	/* now we wait for SFD to start */
-
-	for (i = LOOP_20_SYMBOLS; i > 0; i--) {
-
-
-		//clock_delay(1);
-		//cc2420_printState();
-		// the SFD bit will rise up when the Start of Frame Delimiter
-		// sent OK, that indicate that the frame is being sending right now
-		// this bit must be raised maximum after LOOP_20_SYMBOLS -
-		// the preamble (8 symbols) is started 12 symbols period after the command strobe.
-		if (SFD_IS_1) {
-			debugState(STATE5);
-			printf("SFD is 1\n");
-			cc2420_printState();
-			/* We wait until transmission has ended so that we get an
-			 accurate measurement of the transmission time.*/
-			while (cc2420_status() & BV(CC2420_TX_ACTIVE)) {}
-
-			return 1;
-		}
-	}
-
-	/* If we are using WITH_SEND_CCA, we get here if the packet wasn't
-	 transmitted because of other channel activity. */
-
-	printf("cc2420: do_send() transmission never started\n");
-
-	return -1; /* Transmission never started! */
-}
 /*---------------------------------------------------------------------------*/
 // flush RX FIFO (when underflow occurs)
 static void flushrx(void) {
@@ -409,37 +356,14 @@ void cc2420_set_channel(int c) {
 }
 
 // read the rx fifo first byte at rxptr address and proceed the rxptr
-static void getrxbyte(uint8_t *byte) {
-	FASTSPI_READ_FIFO_BYTE(*byte);
+static void
+getrxdata(void *buf, int len)
+{
+  FASTSPI_READ_FIFO_NO_WAIT(buf, len);
+}
+static void
+getrxbyte(uint8_t *byte)
+{
+  FASTSPI_READ_FIFO_BYTE(*byte);
 }
 
-//TODO: fix me
-
-int cc2420_read(void *buf, unsigned short bufsize) {
-	uint8_t len;
-
-
-	if (!FIFOP_IS_1) {
-		/* If FIFOP is 0, there is no packet in the RXFIFO. */
-		return 0;
-	}
-
-	// the first byte in a packet, it it's length
-	getrxbyte(&len);
-
-
-	/* Clean up in case of FIFO overflow!  This happens for every:
-	 *  full length frame and is signaled by -
-	 *  FIFOP = 1 and FIFO = 0.
-	 */
-	if (FIFOP_IS_1 && !FIFO_IS_1) {
-		/*    printf("cc2420_read: FIFOP_IS_1 1\n");*/
-		flushrx();
-	} else if (FIFOP_IS_1) {
-		/* Another packet has been received and needs attention. */
-		//TODO//  process_poll(&cc2420_process);
-	}
-
-
-	return len;
-}

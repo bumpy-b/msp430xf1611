@@ -22,6 +22,7 @@ void myPrintf(char* format,...);
 
 //#define putchar(c) xSerialPutChar( xPort, (uint8_t)c, 100 )
 int putchar(int c);
+void zeros(char *buf,int len);
 char getchar(void);
 int hasRxData();
 #endif /* MYSTIO_H_ */

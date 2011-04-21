@@ -10,6 +10,12 @@ extern xComPortHandle xPort;
 
 static char DigitToChar[] = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
 
+void zeros(char *buf,int len)
+{
+	int i;
+	for (i=0; i<len; i++)
+		buf[i] = 0;
+}
 int putchar(int c)
 {
 	return xSerialPutChar( xPort, (uint8_t)c, 100 );
