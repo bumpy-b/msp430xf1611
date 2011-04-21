@@ -1,3 +1,5 @@
+//#define SENDER
+
 /* Standard includes. */
 #include <stdio.h>
 #include <stdlib.h>
@@ -53,10 +55,11 @@ int main( void )
   /* Start the LEDs tasks */
   xTaskCreate( vTaskRx, "RX", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
   xTaskCreate( vTaskSHELL, "SHELL", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
-//  xTaskCreate( vTaskLED2, "LED2", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
-//  xTaskCreate( vTaskCC2420_send, "CC2420_send", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
-//  xTaskCreate( vTaskBROADCAST, "BROADCAST", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
+  xTaskCreate( vTaskBROADCAST, "BROADCAST", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
 
+#ifdef SENDER
+    xTaskCreate( vTaskCC2420_send, "CC2420_send", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
+#endif
 
   /* Start the scheduler. */
   vTaskStartScheduler();
@@ -72,7 +75,7 @@ static void vTaskBROADCAST ( void *pvParameters)
 {
 		while (1)
 		{
-			printf("Sending BROADCAST ID\n");
+			//printf("Sending BROADCAST ID\n");
 			cc2420_sendID(cc2420_getID());
 			vTaskDelay(7000);
 
@@ -88,7 +91,7 @@ static void vTaskCC2420_send( void *pvParameters )
 
 	while (1)
 	{
-		printf("Sending ..\n");
+	//	printf("Sending ..\n");
 		cc2420_simplesend(msg,10);
 		vTaskDelay(2500);
 	}
@@ -112,6 +115,7 @@ static void vTaskRx( void *pvParameters )
 
 	  msg[len-2] = 0;
 	  printf("\nCC2420 incoming message from device %d: %s\n",who,msg);
+	  ledFlip(BLUE);
 	  printf("cmd : > ");
 	  vTaskDelay(2000);
   }
@@ -133,6 +137,7 @@ static void vTaskSHELL( void *pvParameters )
 
   while (1)
   {
+
     /* Toggle green LED and wait 1000 ticks */
     if (hasRxData())
     {
@@ -154,20 +159,24 @@ static void vTaskSHELL( void *pvParameters )
 
 	 	  putchar(ch);
 
+	 	 if (ch == 13)
+	  	 {
+			 process_cmd(msg);
+	         printf("\ncmd : > ");
+	         msg[0] = 0;
+	  	     index = 0;
+	  	     continue;
+	 	  }
+
 	 	  msg[index++] = ch;
 	 	  if (index > MAX_MSG)
-	 		 	          {
+	 	 {
 	 		 printf("\ncmd too long !\ncmd: > ");
 	 		 index = 0;
 	 	  }
 
-	 	 if (ch == 13)
-	 	 {
-	 		 process_cmd(msg);
-	         printf("\ncmd : > ");
-    	     index = 0;
-	 	  }
-	 	  ledFlip(BLUE);
+
+
     }
 
     vTaskDelay(50);
@@ -178,7 +187,7 @@ static void vTaskSHELL( void *pvParameters )
 
 void process_cmd(char *msg)
 {
-	if (msg[0]==13)
+	if (msg[0]==0)
 		return;
 
 	if (strncmp(msg,"help",strlen("help")) == 0)
