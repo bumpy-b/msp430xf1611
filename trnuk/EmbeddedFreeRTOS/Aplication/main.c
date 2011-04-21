@@ -52,8 +52,8 @@ int main( void )
 //  xTaskCreate( vTaskLED0, "LED0", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
 //  xTaskCreate( vTaskLED1, "LED1", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
   xTaskCreate( vTaskLED2, "LED2", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
- //   xTaskCreate( vTaskCC2420_send, "CC2420_send", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
-  xTaskCreate( vTaskCC2420_recv, "CC2420_recv", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
+  xTaskCreate( vTaskCC2420_send, "CC2420_send", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
+//  xTaskCreate( vTaskCC2420_recv, "CC2420_recv", configMINIMAL_STACK_SIZE, NULL, mainLED_TASK_PRIORITY, NULL );
 
 
   /* Start the scheduler. */
@@ -68,27 +68,28 @@ int main( void )
 /* Second LED flash task */
 static void vTaskCC2420_recv ( void *pvParameters)
 {
-	    char b = 'a';
-	    int size;
-	    char temp = 0;
+	    int len;
+	    char msg[20];
 
 	    printf("starting task recv\n");
-	    printf("buffer is %c\n",b);
+
 		cc2420_init();
 		cc2420_printState();
 		cc2420_on();
 		cc2420_printState();
-		debugState(STATE0);
 		cc2420_printState();
 		printf("status is %x\n",cc2420_status());
 		while (1)
 		{
+			zeros(msg,20);
 			cc2420_printState();
-	    	size = cc2420_simplerecv();
-	        printf("got %d size\n",size);
+	    	len = cc2420_simplerecv(&msg);
+	        printf("got %d length\n",len);
+
+	        msg[len] = 0;
+	        printf("Message is %s\n",msg);
 			vTaskDelay(2000);
-		//	size = cc2420_simplerecv();
-	    //    printf("got %d size\n",size);
+
 		}
 }
 static void vTaskCC2420_send( void *pvParameters )
