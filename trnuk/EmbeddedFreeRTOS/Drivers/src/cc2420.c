@@ -198,7 +198,7 @@ int cc2420_simplesend(uint8_t *buf,int len)
 	{
 		if (SFD_IS_1)
 		{
-			printf("SFD is 1 !\n");
+//			printf("SFD is 1 !\n");
 			lock = 0;
 			return len;
 		}
@@ -239,7 +239,7 @@ int cc2420_simplerecv(uint8_t *buf,uint8_t *who)
 
 	getrxbyte(&len);
 
-    printf("Got len %d\n",len);
+//    printf("Got len %d\n",len);
 
 	if (len >= 200)
 	{
