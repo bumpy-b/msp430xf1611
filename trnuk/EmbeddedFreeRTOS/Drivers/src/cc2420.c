@@ -26,7 +26,7 @@
 #define LOOP_20_SYMBOLS 400	/* 326us (msp430 @ 2.4576MHz) */
 #define MAX_DATA 20
 #define GET_LOCK() locked = 1
-#define localID 200
+#define localID 201
 /******************/
 #define CC2420_IO_INIT() do \
 { \
@@ -239,7 +239,7 @@ int cc2420_simplerecv(uint8_t *buf,uint8_t *who)
 
 	getrxbyte(&len);
 
-//    printf("Got len %d\n",len);
+   // printf("Got len %d\n",len);
 
 	if (len >= 200)
 	{

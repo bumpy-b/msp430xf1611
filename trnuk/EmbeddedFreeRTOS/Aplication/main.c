@@ -38,7 +38,9 @@ static void prvSetupHardware( void );
 /* serial uart device */
 static uint16_t uxBufferLength = 255;
 static eBaud eBaudRate = ser2400;
-uint8_t msg[MAX_MSG];
+static uint8_t cmdline_msg[MAX_MSG];
+static uint8_t rx_msg[MAX_MSG];
+static uint8_t token[MAX_MSG];
 xComPortHandle xPort;
 
 /*---------------------------------------------------*/
@@ -108,13 +110,13 @@ static void vTaskRx( void *pvParameters )
   while (1)
   {
 
-	  zeros(msg,20);
-	  len = cc2420_simplerecv(msg,&who);
+	  zeros(rx_msg,20);
+	  len = cc2420_simplerecv(rx_msg,&who);
 	  if (len == 0)
 		  continue;
 
-	  msg[len-2] = 0;
-	  printf("\nCC2420 incoming message from device %d: %s\n",who,msg);
+	  rx_msg[len-2] = 0;
+	  printf("\nCC2420 incoming message from device %d: %s\n",who,rx_msg);
 	  ledFlip(BLUE);
 	  printf("cmd : > ");
 	  vTaskDelay(2000);
@@ -126,10 +128,11 @@ void process_cmd(char *msg);
 static void vTaskSHELL( void *pvParameters )
 {
 	char ch;
+	int i;
 
     int index = 0;
 
-	printf("Starting FreeRTOS Shell for MSP430 V1.0\n"
+	printf("\nStarting FreeRTOS Shell for MSP430 V1.0\n"
            "Initialization of UART ...\n"
 		   "Initialization of CC2420 ...\n");
 	printf("For Help type 'help' \n");
@@ -150,7 +153,7 @@ static void vTaskSHELL( void *pvParameters )
         	  if (index <= 0)
         		  continue;
         	  index--;
-        	  msg[index]=0;
+        	  cmdline_msg[index]=0;
         	  putchar(ch);
         	  continue;
 
@@ -159,16 +162,19 @@ static void vTaskSHELL( void *pvParameters )
 
 	 	  putchar(ch);
 
-	 	 if (ch == 13)
-	  	 {
-			 process_cmd(msg);
-	         printf("\ncmd : > ");
-	         msg[0] = 0;
-	  	     index = 0;
-	  	     continue;
-	 	  }
 
-	 	  msg[index++] = ch;
+
+	   	 cmdline_msg[index++] = ch;
+
+	   	if (ch == 13)
+	    {
+	   		cmdline_msg[index-1] = 0;
+	     	 process_cmd(cmdline_msg);
+	         printf("\ncmd : > ");
+ 	         cmdline_msg[0] = 0;
+	         index = 0;
+	   	     continue;
+	     }
 	 	  if (index > MAX_MSG)
 	 	 {
 	 		 printf("\ncmd too long !\ncmd: > ");
@@ -185,12 +191,39 @@ static void vTaskSHELL( void *pvParameters )
 
 /* Some Processing functions */
 
+int getToken(const char *msg,char *token,int pos)
+{
+	int index = 0;
+	if ( (msg[0] == 0) || (msg[0] == 13) )
+	{
+		token[0]=0;
+		return 0;
+	}
+
+    while (1)
+    {
+    	token[index++] = msg[pos++];
+    	if ((msg[pos] == 32) || (msg[pos] == 0) )
+    	{
+    		token[index] = 0;
+    		return pos;
+    	}
+
+    }
+
+}
 void process_cmd(char *msg)
 {
-	if (msg[0]==0)
+
+    int pos;
+
+
+    if ( (msg[0] == 0) || (msg[0] == 13) )
 		return;
 
-	if (strncmp(msg,"help",strlen("help")) == 0)
+	pos = getToken(msg,token,0);
+
+	if (strncmp(token,"help",4) == 0)
 	{
 		printf("\n\nstatus           - shows the status of the platform\n"
 			   "map              - shows others CC2420 MSP active\n"
@@ -198,7 +231,7 @@ void process_cmd(char *msg)
 		return;
 	}
 
-	if (strncmp(msg,"status",strlen("status")) == 0)
+	if (strncmp(token,"status",6) == 0)
 	{
 		printf("\n\n - MSP430 status - \n"
 			   "Red Led is %s\n"
@@ -215,9 +248,22 @@ void process_cmd(char *msg)
 		return;
 	}
 
-	if (strncmp(msg,"map",strlen("map")) == 0)
+	if (strncmp(token,"map",3) == 0)
 	{
 		CC2420_printMap();
+		return;
+	}
+
+	if (strncmp(token,"send",4) == 0)
+	{
+		getToken(msg,token,pos);
+		if (token[0] == 0)
+		{
+			printf("\nSyntax: send <msg>\n");
+			return;
+		}
+		printf("\n\nSending %s\n",token);
+		cc2420_simplesend(token,strlen(token)+2);
 		return;
 	}
 	printf("\nUnknown Command %s \n",msg);
