@@ -17,3 +17,9 @@ void ledFlip(eColor_t colore){
 void debugState(eDebugState state) {
 	LED_OUT = state;
 }
+char *ledState(eColor_t color) {
+	if (LED_OUT & color)
+			return "Off";
+		else
+			return "On";
+}
