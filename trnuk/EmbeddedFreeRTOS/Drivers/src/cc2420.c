@@ -26,7 +26,7 @@
 #define LOOP_20_SYMBOLS 400	/* 326us (msp430 @ 2.4576MHz) */
 #define MAX_DATA 20
 #define GET_LOCK() locked = 1
-#define localID 201
+#define localID 202
 /******************/
 #define CC2420_IO_INIT() do \
 { \
@@ -56,7 +56,7 @@ static uint8_t receive_on;
 static uint16_t pan_id;
 static int channel;
 static volatile uint8_t lock = 0;
-static uint8_t map[4] = {0,0,0,0};
+static uint8_t map[10] = {0};
 /*------------------------------------------*/
 
 /* simple clock delay */
@@ -245,9 +245,9 @@ int cc2420_simplerecv(uint8_t *buf,uint8_t *who)
 	{
 		/* this is ID */
 
-		if (map[200 - len] == 0)
+		if (map[len - 200] == 0)
 			printf("New device on network, ID %d\n",len);
-		map[200 - len] = len;
+		map[len - 200] = len;
 		return 0;
 	}
 	getrxbyte(who);
@@ -389,7 +389,7 @@ void CC2420_printMap()
 	int i;
 	printf("\n\nKnown CC2420 devices: \n");
     printf("Local Device ID: %d\n",localID);
-	for (i=0; i<4; i++)
+	for (i=0; i<10; i++)
 	{
 		if (map[i]>0)
 			printf("Device ID: %d\n",map[i]);

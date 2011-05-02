@@ -99,9 +99,8 @@ static void vTaskCC2420_send( void *pvParameters )
 	}
 }
 
-/* This task is an echo repeater
- * it will show all the chars inputed
- * to putty
+/* task that handles incoming data
+ * from the RF transmiter
  */
 static void vTaskRx( void *pvParameters )
 {
@@ -263,7 +262,7 @@ void process_cmd(char *msg)
 			return;
 		}
 		printf("\n\nSending %s\n",token);
-		cc2420_simplesend(token,strlen(token)+2);
+		cc2420_simplesend(token,strlen(token)+4);
 		return;
 	}
 	printf("\nUnknown Command %s \n",msg);
